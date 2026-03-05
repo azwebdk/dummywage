@@ -18,6 +18,8 @@
             --warning-light: #fef3c7;
             --danger: #dc2626;
             --danger-light: #fee2e2;
+            --purple: #7c3aed;
+            --purple-light: #ede9fe;
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
@@ -29,88 +31,112 @@
             --gray-800: #1f2937;
             --gray-900: #111827;
             --radius: 8px;
-            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-            --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-50); color: var(--gray-800); line-height: 1.5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-100); color: var(--gray-800); line-height: 1.5; }
 
         .app-layout { display: flex; min-height: 100vh; }
 
         /* Sidebar */
-        .sidebar { width: 260px; background: var(--gray-900); color: white; padding: 0; flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
-        .sidebar-header { padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
-        .sidebar-header p { font-size: 11px; color: var(--gray-400); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
-        .sidebar-nav { padding: 12px; flex: 1; overflow-y: auto; }
-        .nav-section { margin-bottom: 8px; }
-        .nav-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gray-500); padding: 8px 12px 4px; }
-        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 6px; cursor: pointer; transition: all 0.15s; font-size: 14px; color: var(--gray-300); }
-        .nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
-        .nav-item.active { background: var(--primary); color: white; font-weight: 500; }
-        .nav-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-        .nav-badge { margin-left: auto; background: var(--danger); color: white; font-size: 11px; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+        .sidebar { width: 260px; background: linear-gradient(180deg, #111827 0%, #1e293b 100%); color: white; padding: 0; flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
+        .sidebar-header { padding: 24px 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+        .sidebar-header h1::before { content: ''; display: inline-block; width: 8px; height: 8px; background: var(--primary); border-radius: 2px; }
+        .sidebar-header p { font-size: 11px; color: var(--gray-400); margin-top: 4px; text-transform: uppercase; letter-spacing: 1.5px; margin-left: 18px; }
+        .sidebar-nav { padding: 16px 12px; flex: 1; overflow-y: auto; }
+        .nav-section { margin-bottom: 4px; }
+        .nav-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gray-500); padding: 12px 12px 6px; font-weight: 600; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 6px; cursor: pointer; transition: all 0.15s; font-size: 13.5px; color: var(--gray-400); margin-bottom: 1px; }
+        .nav-item:hover { background: rgba(255,255,255,0.06); color: var(--gray-200); }
+        .nav-item.active { background: var(--primary); color: white; font-weight: 500; box-shadow: 0 2px 8px rgba(37,99,235,0.35); }
+        .nav-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+        .nav-badge { margin-left: auto; background: var(--danger); color: white; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 700; min-width: 20px; text-align: center; }
+        .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 11px; color: var(--gray-500); }
 
         /* Main content */
         .main-content { flex: 1; margin-left: 260px; min-height: 100vh; }
-        .page-header { background: white; border-bottom: 1px solid var(--gray-200); padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
-        .page-header h2 { font-size: 20px; font-weight: 600; color: var(--gray-900); }
+        .page-header { background: white; border-bottom: 1px solid var(--gray-200); padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .page-header h2 { font-size: 20px; font-weight: 700; color: var(--gray-900); letter-spacing: -0.3px; }
+        .page-header-sub { font-size: 13px; color: var(--gray-400); font-weight: 400; margin-left: 12px; }
         .page-body { padding: 24px 32px; max-width: 1400px; }
 
         /* Cards */
-        .card { background: white; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); margin-bottom: 16px; }
+        .card { background: white; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); margin-bottom: 16px; transition: box-shadow 0.15s; }
+        .card:hover { box-shadow: var(--shadow-md); }
         .card-header { padding: 16px 20px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; }
         .card-header h3 { font-size: 15px; font-weight: 600; }
         .card-body { padding: 20px; }
 
         /* Stats Grid */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .stat-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
-        .stat-label { font-size: 12px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
-        .stat-value { font-size: 28px; font-weight: 700; color: var(--gray-900); margin-top: 4px; }
-        .stat-sub { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+        .stat-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; transition: box-shadow 0.15s, transform 0.15s; }
+        .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .stat-card--blue::before { background: var(--primary); }
+        .stat-card--green::before { background: var(--success); }
+        .stat-card--yellow::before { background: var(--warning); }
+        .stat-card--red::before { background: var(--danger); }
+        .stat-card--purple::before { background: var(--purple); }
+        .stat-icon { font-size: 20px; margin-bottom: 8px; }
+        .stat-label { font-size: 11px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--gray-900); margin-top: 2px; line-height: 1.2; }
+        .stat-sub { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
 
         /* Tables */
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        thead th { background: var(--gray-50); padding: 10px 16px; text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-500); border-bottom: 2px solid var(--gray-200); white-space: nowrap; }
-        tbody td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); }
+        thead th { background: var(--gray-50); padding: 10px 16px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-500); border-bottom: 2px solid var(--gray-200); white-space: nowrap; }
+        tbody td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+        tbody tr { transition: background-color 0.1s; }
         tbody tr:hover { background: var(--gray-50); }
+        tbody tr:nth-child(even) { background: rgba(249,250,251,0.5); }
+        tbody tr:nth-child(even):hover { background: var(--gray-50); }
 
         /* Forms */
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--gray-700); margin-bottom: 4px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 14px; transition: border-color 0.15s; background: white; }
-        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 14px; transition: border-color 0.15s, box-shadow 0.15s; background: white; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
         .form-row { display: flex; gap: 12px; align-items: end; }
         .form-row .form-group { flex: 1; }
+        .form-hint { font-size: 12px; color: var(--gray-400); margin-top: 3px; }
 
         /* Buttons */
         .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; white-space: nowrap; }
+        .btn:active { transform: scale(0.97); }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-primary:hover { background: var(--primary-dark); box-shadow: 0 2px 8px rgba(37,99,235,0.3); }
         .btn-success { background: var(--success); color: white; }
-        .btn-success:hover { background: #15803d; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-danger:hover { background: #b91c1c; }
+        .btn-success:hover { background: #15803d; box-shadow: 0 2px 8px rgba(22,163,74,0.3); }
+        .btn-danger { background: white; border-color: var(--gray-300); color: var(--danger); }
+        .btn-danger:hover { background: var(--danger-light); border-color: var(--danger); }
         .btn-outline { background: white; border-color: var(--gray-300); color: var(--gray-700); }
         .btn-outline:hover { background: var(--gray-50); border-color: var(--gray-400); }
         .btn-sm { padding: 5px 10px; font-size: 12px; }
-        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
 
         /* Badges */
-        .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
         .badge-blue { background: var(--primary-light); color: var(--primary); }
         .badge-green { background: var(--success-light); color: var(--success); }
         .badge-yellow { background: var(--warning-light); color: var(--warning); }
         .badge-red { background: var(--danger-light); color: var(--danger); }
+        .badge-purple { background: var(--purple-light); color: var(--purple); }
+        .badge-gray { background: var(--gray-100); color: var(--gray-500); }
+
+        /* Config tag (for rule set settings) */
+        .config-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 4px; font-size: 12px; color: var(--gray-600); }
+        .config-tag strong { color: var(--gray-800); font-weight: 600; }
 
         /* Toggle */
         .toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
         .toggle input { display: none; }
         .toggle-slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--gray-300); border-radius: 12px; cursor: pointer; transition: 0.2s; }
-        .toggle-slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+        .toggle-slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
         .toggle input:checked + .toggle-slider { background: var(--primary); }
         .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
 
@@ -118,46 +144,47 @@
         .schedule-grid { display: grid; grid-template-columns: auto repeat(7, 1fr); gap: 1px; background: var(--gray-200); border-radius: var(--radius); overflow: hidden; }
         .schedule-cell { background: white; padding: 10px 12px; font-size: 13px; }
         .schedule-header { background: var(--gray-50); font-weight: 600; text-align: center; }
-        .schedule-day-active { background: var(--primary-light); }
+        .schedule-day-active { background: #f0f7ff; }
         .schedule-day-off { background: var(--gray-50); color: var(--gray-400); text-align: center; font-style: italic; }
 
         /* Wage breakdown */
         .wage-breakdown { border: 2px solid var(--primary-light); border-radius: var(--radius); overflow: hidden; }
-        .wage-breakdown .wb-header { background: var(--primary); color: white; padding: 12px 16px; font-weight: 600; }
+        .wage-breakdown .wb-header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 12px 16px; font-weight: 600; font-size: 14px; }
         .wage-line { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--gray-100); }
         .wage-line:last-child { border-bottom: 0; }
         .wage-code { font-family: monospace; font-weight: 700; margin-right: 12px; width: 40px; font-size: 13px; }
         .wage-desc { flex: 1; font-size: 13px; }
         .wage-hours { width: 80px; text-align: right; font-size: 13px; color: var(--gray-500); }
         .wage-amount { width: 100px; text-align: right; font-weight: 600; font-size: 14px; }
-        .wage-total { background: var(--gray-50); font-weight: 700; font-size: 15px; }
+        .wage-total { background: var(--gray-50); font-weight: 700; font-size: 15px; border-top: 2px solid var(--gray-200); }
 
         /* Modal */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: flex-start; justify-content: center; padding: 60px 20px; overflow-y: auto; }
-        .modal { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); width: 100%; max-width: 700px; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); z-index: 200; display: flex; align-items: flex-start; justify-content: center; padding: 60px 20px; overflow-y: auto; }
+        .modal { background: white; border-radius: 12px; box-shadow: var(--shadow-lg), 0 20px 60px rgba(0,0,0,0.15); width: 100%; max-width: 700px; }
         .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; }
         .modal-header h3 { font-size: 18px; font-weight: 600; }
-        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--gray-400); padding: 4px 8px; border-radius: 4px; }
+        .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--gray-400); padding: 6px 10px; border-radius: 6px; transition: all 0.15s; }
         .modal-close:hover { background: var(--gray-100); color: var(--gray-600); }
         .modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
-        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 8px; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 8px; background: var(--gray-50); border-radius: 0 0 12px 12px; }
 
         /* Alerts / Info boxes */
-        .alert { padding: 12px 16px; border-radius: var(--radius); margin-bottom: 16px; font-size: 13px; display: flex; gap: 8px; }
-        .alert-info { background: var(--primary-light); color: var(--primary-dark); border: 1px solid #93c5fd; }
+        .alert { padding: 12px 16px; border-radius: var(--radius); margin-bottom: 16px; font-size: 13px; display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
+        .alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
         .alert-warning { background: var(--warning-light); color: #92400e; border: 1px solid #fcd34d; }
         .alert-danger { background: var(--danger-light); color: #991b1b; border: 1px solid #fca5a5; }
 
         /* Tabs */
         .tabs { display: flex; border-bottom: 2px solid var(--gray-200); margin-bottom: 20px; gap: 0; }
         .tab { padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--gray-500); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
-        .tab:hover { color: var(--gray-700); }
+        .tab:hover { color: var(--gray-700); background: var(--gray-50); }
         .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
         /* Empty state */
-        .empty-state { text-align: center; padding: 48px 20px; color: var(--gray-400); }
-        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
-        .empty-state p { margin-bottom: 16px; }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--gray-400); }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.6; }
+        .empty-state p { margin-bottom: 16px; font-size: 14px; }
+        .empty-state .empty-title { font-size: 16px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; }
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -299,12 +326,14 @@
                         </div>
                     ))}
                 </nav>
+                <div className="sidebar-footer">Fogito Payroll v1.0</div>
             </div>
         );
     }
 
     // ===== Dashboard =====
     function DashboardPage() {
+        const { setPage } = useContext(AppContext);
         const [data, setData] = useState(null);
         useEffect(() => { api('/dashboard').then(setData).catch(console.error); }, []);
 
@@ -315,25 +344,35 @@
                 <div className="page-header"><h2>Dashboard</h2></div>
                 <div className="page-body">
                     <div className="stats-grid">
-                        <div className="stat-card">
+                        <div className="stat-card stat-card--blue" style={{cursor:'pointer'}} onClick={() => setPage('employees')}>
+                            <div className="stat-icon">👥</div>
                             <div className="stat-label">Employees</div>
                             <div className="stat-value">{data.employee_count}</div>
+                            <div className="stat-sub">Active contracts</div>
                         </div>
-                        <div className="stat-card">
+                        <div className="stat-card stat-card--purple" style={{cursor:'pointer'}} onClick={() => setPage('rule-sets')}>
+                            <div className="stat-icon">⚙️</div>
                             <div className="stat-label">Rule Sets</div>
                             <div className="stat-value">{data.rule_set_count}</div>
+                            <div className="stat-sub">Wage configurations</div>
                         </div>
-                        <div className="stat-card">
-                            <div className="stat-label">Time Entries (week)</div>
+                        <div className="stat-card stat-card--green" style={{cursor:'pointer'}} onClick={() => setPage('time-entries')}>
+                            <div className="stat-icon">🕐</div>
+                            <div className="stat-label">Time Entries</div>
                             <div className="stat-value">{data.time_entry_count}</div>
+                            <div className="stat-sub">This week</div>
                         </div>
-                        <div className="stat-card">
-                            <div className="stat-label">Total Wages (week)</div>
+                        <div className="stat-card stat-card--yellow" style={{cursor:'pointer'}} onClick={() => setPage('payroll')}>
+                            <div className="stat-icon">💰</div>
+                            <div className="stat-label">Total Wages</div>
                             <div className="stat-value">{fmt.currency(data.total_wages)}</div>
+                            <div className="stat-sub">This week</div>
                         </div>
-                        <div className="stat-card">
+                        <div className="stat-card stat-card--red" style={{cursor:'pointer'}} onClick={() => setPage('warnings')}>
+                            <div className="stat-icon">⚠️</div>
                             <div className="stat-label">Warnings</div>
                             <div className="stat-value" style={{color: data.unresolved_warnings > 0 ? 'var(--danger)' : 'var(--success)'}}>{data.unresolved_warnings}</div>
+                            <div className="stat-sub">{data.unresolved_warnings > 0 ? 'Unresolved' : 'All clear'}</div>
                         </div>
                     </div>
 
@@ -401,8 +440,9 @@
                     {ruleSets.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-icon">⚙️</div>
-                            <p>No rule sets configured yet.</p>
-                            <button className="btn btn-primary" onClick={() => setShowForm(true)}>Create First Rule Set</button>
+                            <p className="empty-title">No rule sets configured</p>
+                            <p>Create a wage rule set to define overtime, supplements, and break policies.</p>
+                            <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ Create First Rule Set</button>
                         </div>
                     ) : (
                         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(340px, 1fr))', gap:'16px'}}>
@@ -413,16 +453,15 @@
                                         <span className="badge badge-blue">{rs.employee_count || 0} employees</span>
                                     </div>
                                     <div className="card-body" style={{fontSize:'13px'}}>
-                                        <p style={{color:'var(--gray-500)', marginBottom:'12px'}}>{rs.description || 'No description'}</p>
-                                        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px'}}>
-                                            <div><strong>OT Model:</strong> {rs.overtime_model}</div>
-                                            <div><strong>Trigger:</strong> {rs.overtime_trigger_mode}</div>
-                                            <div><strong>Balancing:</strong> {rs.balancing_mode}</div>
-                                            <div><strong>Stacking:</strong> {rs.stacking_mode}</div>
-                                            <div><strong>Breaks paid:</strong> {rs.breaks_paid ? 'Yes' : 'No'}</div>
-                                            <div><strong>Break duration:</strong> {rs.default_break_duration}min</div>
+                                        {rs.description && <p style={{color:'var(--gray-500)', marginBottom:'12px'}}>{rs.description}</p>}
+                                        <div style={{display:'flex', flexWrap:'wrap', gap:'6px', marginBottom:'12px'}}>
+                                            <span className="config-tag"><strong>OT:</strong> {rs.overtime_model}</span>
+                                            <span className="config-tag"><strong>Trigger:</strong> {rs.overtime_trigger_mode}</span>
+                                            <span className="config-tag"><strong>Balance:</strong> {rs.balancing_mode}</span>
+                                            <span className="config-tag"><strong>Stack:</strong> {rs.stacking_mode}</span>
+                                            <span className="config-tag"><strong>Breaks:</strong> {rs.breaks_paid ? 'Paid' : 'Unpaid'} ({rs.default_break_duration}min)</span>
                                         </div>
-                                        <div style={{marginTop:'12px', display:'flex', gap:'8px'}}>
+                                        <div style={{display:'flex', gap:'8px'}}>
                                             <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); setEditing(rs); setShowForm(true); }}>Edit</button>
                                             <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(rs.id); }}>Delete</button>
                                         </div>
@@ -771,8 +810,9 @@
                     {employees.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-icon">👥</div>
-                            <p>No employees yet.</p>
-                            <button className="btn btn-primary" onClick={() => setShowForm(true)}>Add First Employee</button>
+                            <p className="empty-title">No employees yet</p>
+                            <p>Add your first employee to start managing payroll.</p>
+                            <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ Add First Employee</button>
                         </div>
                     ) : (
                         <div className="card">
@@ -784,10 +824,10 @@
                                             <tr key={emp.id}>
                                                 <td style={{fontWeight:500}}>{emp.first_name} {emp.last_name}</td>
                                                 <td>{emp.employee_number || '-'}</td>
-                                                <td><span className="badge badge-green">{(emp.contract_type || 'none').replace('_', ' ')}</span></td>
-                                                <td>{emp.total_weekly_hours || '-'}h</td>
+                                                <td><span className={`badge ${emp.contract_type ? 'badge-green' : 'badge-gray'}`}>{emp.contract_type ? emp.contract_type.replace('_', ' ') : 'No contract'}</span></td>
+                                                <td>{emp.total_weekly_hours ? `${emp.total_weekly_hours}h` : '-'}</td>
                                                 <td>{emp.base_hourly_wage ? fmt.currency(emp.base_hourly_wage) : '-'}</td>
-                                                <td>{emp.rule_set_name || '-'}</td>
+                                                <td>{emp.rule_set_name || <span style={{color:'var(--gray-400)'}}>Not assigned</span>}</td>
                                                 <td>
                                                     <div className="btn-group">
                                                         <button className="btn btn-sm btn-primary" onClick={() => setSelectedEmp(emp)}>Manage</button>
@@ -856,10 +896,12 @@
                     <div className="tabs" style={{padding:'0 24px'}}>
                         <div className={`tab ${tab === 'contract' ? 'active' : ''}`} onClick={() => setTab('contract')}>Contract & Wage</div>
                         <div className={`tab ${tab === 'schedule' ? 'active' : ''}`} onClick={() => setTab('schedule')}>Schedule</div>
+                        <div className={`tab ${tab === 'audit' ? 'active' : ''}`} onClick={() => setTab('audit')}>Audit Trail</div>
                     </div>
                     <div className="modal-body">
                         {tab === 'contract' && <ContractEditor employee={emp} ruleSets={ruleSets} onUpdate={load} />}
                         {tab === 'schedule' && <ScheduleEditor employee={emp} onUpdate={load} />}
+                        {tab === 'audit' && <AuditTrail employeeId={emp.id} />}
                     </div>
                 </div>
             </div>
@@ -1027,11 +1069,52 @@
         );
     }
 
+    // ===== Audit Trail (Section 9) =====
+    function AuditTrail({ employeeId }) {
+        const [changes, setChanges] = useState([]);
+        useEffect(() => {
+            api(`/contract-changes?employee_id=${employeeId}`).then(setChanges).catch(console.error);
+        }, [employeeId]);
+
+        if (changes.length === 0) {
+            return (
+                <div className="empty-state" style={{padding:'40px 20px'}}>
+                    <div className="empty-icon">📋</div>
+                    <p className="empty-title">No changes recorded</p>
+                    <p>Contract changes will appear here when modifications are made.</p>
+                </div>
+            );
+        }
+
+        return (
+            <div>
+                <p style={{fontSize:'13px', color:'var(--gray-500)', marginBottom:'12px'}}>History of contract changes for this employee (Section 9: Mid-Week Contract Changes).</p>
+                <div className="table-wrap">
+                    <table>
+                        <thead><tr><th>Date</th><th>Field</th><th>Old Value</th><th>New Value</th><th>Changed By</th></tr></thead>
+                        <tbody>
+                            {changes.map((c, i) => (
+                                <tr key={i}>
+                                    <td>{fmt.date(c.effective_date)}</td>
+                                    <td><span className="config-tag"><strong>{c.field_name.replace(/_/g, ' ')}</strong></span></td>
+                                    <td style={{color:'var(--danger)'}}>{c.old_value || '-'}</td>
+                                    <td style={{color:'var(--success)', fontWeight:600}}>{c.new_value || '-'}</td>
+                                    <td>{c.changed_by}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+    }
+
     // ===== Time Entries =====
     function TimeEntriesPage() {
         const { employees } = useContext(AppContext);
         const [entries, setEntries] = useState([]);
         const [showForm, setShowForm] = useState(false);
+        const [editingEntry, setEditingEntry] = useState(null);
         const [selectedEntry, setSelectedEntry] = useState(null);
         const [filters, setFilters] = useState({ employee_id: '', date_from: getMonday(), date_to: getSunday() });
 
@@ -1055,9 +1138,14 @@
         useEffect(() => { load(); }, [filters]);
 
         const saveEntry = async (data) => {
-            await api('/time-entries', 'POST', data);
+            if (data.id) {
+                await api(`/time-entries/${data.id}`, 'PUT', data);
+            } else {
+                await api('/time-entries', 'POST', data);
+            }
             await load();
             setShowForm(false);
+            setEditingEntry(null);
         };
 
         const deleteEntry = async (id) => {
@@ -1071,7 +1159,7 @@
             <div>
                 <div className="page-header">
                     <h2>Time Entries</h2>
-                    <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ New Entry</button>
+                    <button className="btn btn-primary" onClick={() => { setEditingEntry(null); setShowForm(true); }}>+ New Entry</button>
                 </div>
                 <div className="page-body">
                     <div className="card">
@@ -1095,7 +1183,11 @@
                     </div>
 
                     {entries.length === 0 ? (
-                        <div className="empty-state"><div className="empty-icon">🕐</div><p>No time entries in this period.</p></div>
+                        <div className="empty-state">
+                            <div className="empty-icon">🕐</div>
+                            <p className="empty-title">No time entries</p>
+                            <p>No time entries found for the selected period. Add a new entry or adjust the date filters.</p>
+                        </div>
                     ) : (
                         <div className="card">
                             <div className="table-wrap">
@@ -1104,7 +1196,9 @@
                                     <tbody>
                                         {entries.map(e => {
                                             const mins = ((new Date('2000-01-01T'+e.clock_out) - new Date('2000-01-01T'+e.clock_in)) / 60000);
-                                            const net = (mins > 0 ? mins : mins + 1440) / 60 - (e.break_minutes || 0) / 60;
+                                            const grossH = (mins > 0 ? mins : mins + 1440) / 60;
+                                            const net = grossH - (e.break_minutes || 0) / 60;
+                                            const isLong = net > 10;
                                             return (
                                                 <tr key={e.id}>
                                                     <td>{fmt.date(e.date)}</td>
@@ -1112,9 +1206,13 @@
                                                     <td>{e.clock_in}</td>
                                                     <td>{e.clock_out}</td>
                                                     <td>{e.break_minutes || 0}min</td>
-                                                    <td>{net.toFixed(2)}h</td>
+                                                    <td>
+                                                        <span style={{fontWeight:600, color: isLong ? 'var(--warning)' : 'var(--gray-800)'}}>{net.toFixed(2)}h</span>
+                                                        {isLong && <span style={{marginLeft:'4px', fontSize:'11px', color:'var(--warning)'}}>Long shift</span>}
+                                                    </td>
                                                     <td>
                                                         <div className="btn-group">
+                                                            <button className="btn btn-sm btn-outline" onClick={() => { setEditingEntry(e); setShowForm(true); }}>Edit</button>
                                                             <button className="btn btn-sm btn-primary" onClick={() => setSelectedEntry(e)}>Details</button>
                                                             <button className="btn btn-sm btn-danger" onClick={() => deleteEntry(e.id)}>Delete</button>
                                                         </div>
@@ -1128,14 +1226,18 @@
                         </div>
                     )}
                 </div>
-                {showForm && <TimeEntryFormModal employees={employees} onSave={saveEntry} onClose={() => setShowForm(false)} />}
+                {showForm && <TimeEntryFormModal employees={employees} entry={editingEntry} onSave={saveEntry} onClose={() => { setShowForm(false); setEditingEntry(null); }} />}
                 {selectedEntry && <TimeEntryDetailModal entryId={selectedEntry.id} onClose={() => setSelectedEntry(null)} />}
             </div>
         );
     }
 
-    function TimeEntryFormModal({ employees, onSave, onClose }) {
-        const [form, setForm] = useState({
+    function TimeEntryFormModal({ employees, entry, onSave, onClose }) {
+        const [form, setForm] = useState(entry ? {
+            id: entry.id, employee_id: entry.employee_id, date: entry.date,
+            clock_in: entry.clock_in, clock_out: entry.clock_out,
+            break_minutes: entry.break_minutes ?? 30, is_employer_cancelled: entry.is_employer_cancelled || 0, notes: entry.notes || ''
+        } : {
             employee_id: employees[0]?.id || '', date: new Date().toISOString().split('T')[0],
             clock_in: '08:00', clock_out: '16:00', break_minutes: 30, is_employer_cancelled: 0, notes: ''
         });
@@ -1144,7 +1246,7 @@
         return (
             <div className="modal-overlay" onClick={onClose}>
                 <div className="modal" onClick={e => e.stopPropagation()}>
-                    <div className="modal-header"><h3>New Time Entry</h3><button className="modal-close" onClick={onClose}>&times;</button></div>
+                    <div className="modal-header"><h3>{entry ? 'Edit Time Entry' : 'New Time Entry'}</h3><button className="modal-close" onClick={onClose}>&times;</button></div>
                     <div className="modal-body">
                         <div className="form-grid">
                             <div className="form-group">
@@ -1169,7 +1271,7 @@
                     </div>
                     <div className="modal-footer">
                         <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-                        <button className="btn btn-success" onClick={() => onSave(form)}>Save & Calculate</button>
+                        <button className="btn btn-success" onClick={() => onSave(form)}>{entry ? 'Update & Recalculate' : 'Save & Calculate'}</button>
                     </div>
                 </div>
             </div>
@@ -1294,7 +1396,13 @@
                             </div>
                         </div>
                     ))}
-                    {lines.length === 0 && <div className="empty-state"><div className="empty-icon">💰</div><p>No wage lines found for this period.</p></div>}
+                    {lines.length === 0 && (
+                        <div className="empty-state">
+                            <div className="empty-icon">💰</div>
+                            <p className="empty-title">No payroll data</p>
+                            <p>No wage lines found for this period. Create time entries and run calculations first.</p>
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -1349,7 +1457,7 @@
                                     </label>
                                 </div>
                             </div>
-                            <button className="btn btn-success" onClick={simulate} style={{marginTop:'8px'}}>Calculate Wages</button>
+                            <button className="btn btn-success" onClick={simulate} style={{marginTop:'8px', padding:'10px 24px', fontSize:'15px'}}>Calculate Wages</button>
                         </div>
                     </div>
 
@@ -1427,22 +1535,35 @@
     // ===== Holidays =====
     function HolidaysPage() {
         const [holidays, setHolidays] = useState([]);
+        const [calendar, setCalendar] = useState('danish');
         const [newH, setNewH] = useState({ date: '', name: '', calendar_name: 'danish' });
 
-        const load = async () => { setHolidays(await api('/holidays?calendar=danish')); };
-        useEffect(() => { load(); }, []);
+        const load = async () => { setHolidays(await api(`/holidays?calendar=${calendar}`)); };
+        useEffect(() => { load(); }, [calendar]);
 
         const add = async () => {
             if (!newH.date || !newH.name) return;
-            await api('/holidays', 'POST', newH);
-            setNewH({ date: '', name: '', calendar_name: 'danish' });
+            await api('/holidays', 'POST', { ...newH, calendar_name: calendar });
+            setNewH({ date: '', name: '', calendar_name: calendar });
             await load();
         };
         const remove = async (id) => { await api(`/holidays/${id}`, 'DELETE'); await load(); };
 
+        const calendarLabel = { danish: 'Danish', swedish: 'Swedish', custom: 'Custom' }[calendar] || calendar;
+        const currentYear = holidays.length > 0 ? holidays[0].date?.substring(0, 4) : new Date().getFullYear();
+
         return (
             <div>
-                <div className="page-header"><h2>Holiday Calendar</h2></div>
+                <div className="page-header">
+                    <h2>Holiday Calendar</h2>
+                    <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                        <select value={calendar} onChange={e => setCalendar(e.target.value)} style={{padding:'8px 12px', border:'1px solid var(--gray-300)', borderRadius:'6px', fontSize:'14px'}}>
+                            <option value="danish">Danish Calendar</option>
+                            <option value="swedish">Swedish Calendar</option>
+                            <option value="custom">Custom Calendar</option>
+                        </select>
+                    </div>
+                </div>
                 <div className="page-body">
                     <div className="card">
                         <div className="card-header"><h3>Add Holiday</h3></div>
@@ -1450,22 +1571,33 @@
                             <div style={{display:'flex', gap:'12px', alignItems:'end'}}>
                                 <div className="form-group" style={{margin:0}}><label>Date</label><input type="date" value={newH.date} onChange={e => setNewH(h => ({...h, date: e.target.value}))} /></div>
                                 <div className="form-group" style={{margin:0, flex:1}}><label>Name</label><input value={newH.name} onChange={e => setNewH(h => ({...h, name: e.target.value}))} placeholder="e.g. Grundlovsdag" /></div>
-                                <button className="btn btn-primary" onClick={add}>Add</button>
+                                <button className="btn btn-primary" onClick={add}>Add Holiday</button>
                             </div>
                         </div>
                     </div>
                     <div className="card">
-                        <div className="card-header"><h3>Danish Holidays (2026)</h3></div>
+                        <div className="card-header">
+                            <h3>{calendarLabel} Holidays ({currentYear})</h3>
+                            <span className="badge badge-blue">{holidays.length} holidays</span>
+                        </div>
                         <div className="card-body" style={{padding:0}}>
-                            <table>
-                                <thead><tr><th>Date</th><th>Name</th><th></th></tr></thead>
-                                <tbody>
-                                    {holidays.map(h => (
-                                        <tr key={h.id}><td>{fmt.date(h.date)}</td><td>{h.name}</td>
-                                        <td><button className="btn btn-sm btn-danger" onClick={() => remove(h.id)}>Remove</button></td></tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            {holidays.length === 0 ? (
+                                <div className="empty-state" style={{padding:'40px 20px'}}>
+                                    <div className="empty-icon">📅</div>
+                                    <p className="empty-title">No holidays</p>
+                                    <p>No holidays configured for this calendar yet.</p>
+                                </div>
+                            ) : (
+                                <table>
+                                    <thead><tr><th>Date</th><th>Name</th><th></th></tr></thead>
+                                    <tbody>
+                                        {holidays.map(h => (
+                                            <tr key={h.id}><td>{fmt.date(h.date)}</td><td>{h.name}</td>
+                                            <td><button className="btn btn-sm btn-danger" onClick={() => remove(h.id)}>Remove</button></td></tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1487,7 +1619,11 @@
                 <div className="page-header"><h2>Warnings & Alerts</h2></div>
                 <div className="page-body">
                     {warnings.length === 0 ? (
-                        <div className="empty-state"><div className="empty-icon">✅</div><p>No unresolved warnings.</p></div>
+                        <div className="empty-state">
+                            <div className="empty-icon">✅</div>
+                            <p className="empty-title">All clear</p>
+                            <p>No unresolved warnings. The system is running smoothly.</p>
+                        </div>
                     ) : (
                         <div className="card">
                             <div className="card-body" style={{padding:0}}>

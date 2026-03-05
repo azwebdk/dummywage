@@ -51,6 +51,8 @@ function routeRequest(PDO $pdo, string $method, array $seg, array $body) {
             return handleEmployees($pdo, $method, $id, $subResource, $subId, $body);
         case 'contracts':
             return handleContracts($pdo, $method, $id, $body);
+        case 'contract-changes':
+            return handleContractChanges($pdo, $method, $id, $body);
         case 'schedules':
             return handleSchedules($pdo, $method, $id, $subResource, $body);
         case 'time-entries':
@@ -296,11 +298,10 @@ function handleContracts(PDO $pdo, string $method, ?string $id, array $body) {
         case 'PUT':
             if (!$id) throw new Exception("ID required");
             // Log contract changes for audit (Section 9)
-            $oldContract = $pdo->prepare("SELECT * FROM employee_contracts WHERE id = ?")->execute([$id]);
-            $old = $pdo->prepare("SELECT * FROM employee_contracts WHERE id = ?")->execute([$id]);
             $stmt = $pdo->prepare("SELECT * FROM employee_contracts WHERE id = ?");
             $stmt->execute([$id]);
             $old = $stmt->fetch();
+            if (!$old) throw new Exception("Contract not found");
 
             $trackFields = ['total_weekly_hours','base_hourly_wage','contract_type','breaks_paid'];
             foreach ($trackFields as $f) {
@@ -329,6 +330,22 @@ function handleContracts(PDO $pdo, string $method, ?string $id, array $body) {
             $pdo->prepare("DELETE FROM employee_contracts WHERE id = ?")->execute([$id]);
             return ['message' => 'Deleted'];
     }
+}
+
+// ===== CONTRACT CHANGES (Audit Trail - Section 9) =====
+function handleContractChanges(PDO $pdo, string $method, ?string $id, array $body) {
+    if ($method !== 'GET') throw new Exception("Only GET supported");
+    $empId = $_GET['employee_id'] ?? null;
+    $sql = "SELECT * FROM contract_changes";
+    $params = [];
+    if ($empId) {
+        $sql .= " WHERE employee_id = ?";
+        $params[] = $empId;
+    }
+    $sql .= " ORDER BY created_at DESC";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
 }
 
 // ===== SCHEDULES =====
@@ -514,8 +531,9 @@ function handleCalculate(PDO $pdo, string $method, ?string $id, array $seg, arra
             ]);
             $entryId = $pdo->lastInsertId();
             $result = $calc->calculate((int)$entryId);
-            // Clean up
+            // Clean up: remove temp entry, wage lines, and any warnings created during simulation
             $pdo->prepare("DELETE FROM wage_lines WHERE time_entry_id = ?")->execute([$entryId]);
+            $pdo->prepare("DELETE FROM warnings WHERE employee_id = ? AND date = ? AND created_at >= datetime('now', '-10 seconds')")->execute([$body['employee_id'], $body['date']]);
             $pdo->prepare("DELETE FROM time_entries WHERE id = ?")->execute([$entryId]);
             return $result;
         }

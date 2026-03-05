@@ -91,7 +91,8 @@ class WageCalculator {
 
         // === STEP 10: Special supplements ===
         // Schedule-change supplement if working non-contracted day with <4 weeks notice
-        if ($dayType['is_non_contracted'] && !$dayType['is_holiday']) {
+        // Only applies when employee HAS a schedule — zero-hours workers with no schedule don't get this
+        if ($dayType['is_non_contracted'] && !$dayType['is_holiday'] && $schedule !== null) {
             // Simplified: always apply schedule change supplement for non-contracted days
             $schedChangeRate = 50.0; // default +50%
             $wageLines[] = [
@@ -430,26 +431,13 @@ class WageCalculator {
      * Check weekly cumulative hours for overtime threshold
      */
     private function checkWeeklyOvertime(array $entry, array $contract, array $ruleSet, float $todayHours): array {
-        // Get the Monday of this week
         $date = $entry['date'];
         $dayOfWeek = (int)date('N', strtotime($date));
         $monday = date('Y-m-d', strtotime($date . ' -' . ($dayOfWeek - 1) . ' days'));
         $sunday = date('Y-m-d', strtotime($monday . ' +6 days'));
 
-        // Get all time entries this week before today
-        $stmt = $this->pdo->prepare("
-            SELECT SUM(
-                CASE WHEN break_minutes IS NOT NULL AND ? = 0
-                    THEN (strftime('%s', clock_out) - strftime('%s', clock_in)) / 3600.0 - break_minutes / 60.0
-                    ELSE (strftime('%s', clock_out) - strftime('%s', clock_in)) / 3600.0
-                END
-            ) as total_hours
-            FROM time_entries
-            WHERE employee_id = ? AND date >= ? AND date <= ? AND date < ?
-        ");
-        $breaksPaid = $this->areBreaksPaid($contract, $ruleSet) ? 1 : 0;
-        $stmt->execute([$breaksPaid, $entry['employee_id'], $monday, $sunday, $date]);
-        $priorHours = (float)($stmt->fetchColumn() ?: 0);
+        // Use PHP-based calculation (SQLite strftime doesn't work with bare HH:MM time strings)
+        $priorHours = $this->getPriorHoursInRange($entry['employee_id'], $monday, $sunday, $date, $contract, $ruleSet);
 
         // Check for mid-week contract changes
         $weeklyThreshold = $this->getBlendedWeeklyThreshold($contract, $entry['employee_id'], $monday, $sunday);
@@ -808,15 +796,8 @@ class WageCalculator {
         $monthStart = date('Y-m-01', strtotime($date));
         $monthEnd = date('Y-m-t', strtotime($date));
 
-        $stmt = $this->pdo->prepare("
-            SELECT COALESCE(SUM(
-                (strftime('%s', clock_out) - strftime('%s', clock_in)) / 3600.0
-            ), 0) as total_hours
-            FROM time_entries
-            WHERE employee_id = ? AND date >= ? AND date <= ? AND date < ?
-        ");
-        $stmt->execute([$entry['employee_id'], $monthStart, $monthEnd, $date]);
-        $priorHours = (float)$stmt->fetchColumn();
+        // Use PHP-based calculation with proper break deduction
+        $priorHours = $this->getPriorHoursInRange($entry['employee_id'], $monthStart, $monthEnd, $date, $contract, $ruleSet);
 
         // Monthly threshold: weekly hours * weeks in month
         $daysInMonth = (int)date('t', strtotime($date));
@@ -854,15 +835,8 @@ class WageCalculator {
         $periodStart = date('Y-m-d', strtotime($yearStartMonday . " +{$periodStartWeek} weeks"));
         $periodEnd = date('Y-m-d', strtotime($periodStart . " +{$periodWeeks} weeks -1 day"));
 
-        $stmt = $this->pdo->prepare("
-            SELECT COALESCE(SUM(
-                (strftime('%s', clock_out) - strftime('%s', clock_in)) / 3600.0
-            ), 0) as total_hours
-            FROM time_entries
-            WHERE employee_id = ? AND date >= ? AND date <= ? AND date < ?
-        ");
-        $stmt->execute([$entry['employee_id'], $periodStart, $periodEnd, $date]);
-        $priorHours = (float)$stmt->fetchColumn();
+        // Use PHP-based calculation with proper break deduction
+        $priorHours = $this->getPriorHoursInRange($entry['employee_id'], $periodStart, $periodEnd, $date, $contract, $ruleSet);
 
         $periodThreshold = $contract['total_weekly_hours'] * $periodWeeks;
 
@@ -875,6 +849,33 @@ class WageCalculator {
             'period_threshold' => round($periodThreshold, 4),
             'overtime' => round(max(0, $todayOvertime), 4),
         ];
+    }
+
+    /**
+     * Get total net worked hours for an employee in a date range (before a given date).
+     * Uses PHP-based calculation to avoid SQLite strftime issues with bare time strings.
+     */
+    private function getPriorHoursInRange(int $employeeId, string $startDate, string $endDate, string $beforeDate, array $contract, array $ruleSet): float {
+        $stmt = $this->pdo->prepare("
+            SELECT clock_in, clock_out, break_minutes
+            FROM time_entries
+            WHERE employee_id = ? AND date >= ? AND date <= ? AND date < ?
+        ");
+        $stmt->execute([$employeeId, $startDate, $endDate, $beforeDate]);
+        $entries = $stmt->fetchAll();
+
+        $breaksPaid = $this->areBreaksPaid($contract, $ruleSet);
+        $totalHours = 0;
+
+        foreach ($entries as $e) {
+            $mins = $this->calcWorkedMinutes($e['clock_in'], $e['clock_out']);
+            if (!$breaksPaid && $e['break_minutes']) {
+                $mins -= $e['break_minutes'];
+            }
+            $totalHours += max(0, $mins / 60);
+        }
+
+        return $totalHours;
     }
 
     private function areBreaksPaid(array $contract, array $ruleSet): bool {
