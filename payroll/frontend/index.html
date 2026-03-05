@@ -186,6 +186,15 @@
         .empty-state p { margin-bottom: 16px; font-size: 14px; }
         .empty-state .empty-title { font-size: 16px; font-weight: 600; color: var(--gray-600); margin-bottom: 4px; }
 
+        /* Info Tooltips */
+        .info-tip { position: relative; display: inline-flex; align-items: center; margin-left: 5px; vertical-align: middle; }
+        .info-tip-icon { width: 15px; height: 15px; border-radius: 50%; background: var(--gray-200); color: var(--gray-500); font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: help; font-style: italic; line-height: 1; transition: all 0.15s; flex-shrink: 0; }
+        .info-tip-icon:hover { background: var(--primary-light); color: var(--primary); }
+        .info-tip-text { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--gray-900); color: var(--gray-100); padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 400; font-style: normal; white-space: normal; width: 280px; line-height: 1.55; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.2); pointer-events: none; letter-spacing: 0; text-transform: none; }
+        .info-tip-text::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--gray-900); }
+        .info-tip:hover .info-tip-text { display: block; }
+        .info-tip-text strong { color: white; }
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar { width: 60px; }
@@ -231,6 +240,16 @@
         W05: '#6d28d9', W06: '#0891b2', W07: '#0d9488', W08: '#be185d',
         W09: '#ea580c', W10: '#65a30d', W11: '#475569'
     };
+
+    // ===== Info Tooltip Component =====
+    function InfoTip({ text }) {
+        return (
+            <span className="info-tip">
+                <span className="info-tip-icon">i</span>
+                <span className="info-tip-text">{text}</span>
+            </span>
+        );
+    }
 
     // ===== Context =====
     const AppContext = createContext();
@@ -527,7 +546,7 @@
                                     <textarea value={form.description} onChange={e => set('description', e.target.value)} rows="2" placeholder="Notes about which employees this applies to" />
                                 </div>
                                 <div className="form-group">
-                                    <label>Stacking Mode</label>
+                                    <label>Stacking Mode <InfoTip text="How overtime and supplements interact. Cumulative: All applicable rates stack (e.g., night +35% AND overtime +50% = +85%). Highest wins: Only the single highest rate applies — prevents double-dipping. Supplement replaces overtime: When a supplement applies during overtime hours, it replaces the overtime rate entirely." /></label>
                                     <select value={form.stacking_mode} onChange={e => set('stacking_mode', e.target.value)}>
                                         <option value="cumulative">Cumulative (stack all groups)</option>
                                         <option value="highest_wins">Highest wins</option>
@@ -540,7 +559,7 @@
                             <div>
                                 <div className="form-grid">
                                     <div className="form-group">
-                                        <label>Overtime Model</label>
+                                        <label>Overtime Model <InfoTip text="Tiered: First X overtime hours at Tier 1 rate (e.g. +50%), remaining hours at higher Tier 2 rate (e.g. +100%). Flat: Single fixed percentage for all overtime hours. None: No overtime calculated — all hours paid at base rate regardless of total." /></label>
                                         <select value={form.overtime_model} onChange={e => set('overtime_model', e.target.value)}>
                                             <option value="tiered">Tiered (Tier 1 + Tier 2)</option>
                                             <option value="flat">Flat rate</option>
@@ -548,7 +567,7 @@
                                         </select>
                                     </div>
                                     <div className="form-group">
-                                        <label>Overtime Trigger Mode</label>
+                                        <label>Overtime Trigger Mode <InfoTip text="Per-day: Overtime triggers when daily worked hours exceed the employee's scheduled hours for that day. Weekly: Triggers only when total weekly hours exceed the contract's weekly hours threshold. Combined: Checks both — per-day overruns first, then weekly excess on top." /></label>
                                         <select value={form.overtime_trigger_mode} onChange={e => set('overtime_trigger_mode', e.target.value)}>
                                             <option value="combined">Combined (recommended)</option>
                                             <option value="per_day">Per-day</option>
@@ -556,7 +575,7 @@
                                         </select>
                                     </div>
                                     <div className="form-group">
-                                        <label>Balancing Mode</label>
+                                        <label>Balancing Mode <InfoTip text="Controls whether daily overruns can be 'forgiven' over a longer period. None: Every daily overrun is overtime immediately. Weekly: Overruns forgiven if total week stays under contracted weekly hours. Monthly: Same across the full month. Allows flex-time arrangements." /></label>
                                         <select value={form.balancing_mode} onChange={e => set('balancing_mode', e.target.value)}>
                                             <option value="none">None (strict per-day)</option>
                                             <option value="weekly">Weekly</option>
@@ -577,7 +596,7 @@
                                         <div className="card-body">
                                             <div className="form-grid">
                                                 <div className="form-group">
-                                                    <label>Tier 1 Threshold (hours)</label>
+                                                    <label>Tier 1 Threshold (hours) <InfoTip text="How many overtime hours use the Tier 1 rate before switching to the higher Tier 2 rate. E.g., 3h means the first 3 overtime hours get Tier 1 (+50%), anything beyond gets Tier 2 (+100%)." /></label>
                                                     <input type="number" step="0.5" value={form.tier1_threshold} onChange={e => set('tier1_threshold', parseFloat(e.target.value))} />
                                                 </div>
                                                 <div className="form-group">
@@ -605,7 +624,7 @@
                         {tab === 'breaks' && (
                             <div className="form-grid">
                                 <div className="form-group">
-                                    <label>Breaks Paid (default)</label>
+                                    <label>Breaks Paid (default) <InfoTip text="When ON, break time counts as paid working hours and generates a W10 'Paid break' wage line. Common in the public sector. When OFF, break minutes are deducted from net worked hours before wage calculation. Individual employees can override this in their contract." /></label>
                                     <div style={{display:'flex', alignItems:'center', gap:'12px', marginTop:'4px'}}>
                                         <label className="toggle">
                                             <input type="checkbox" checked={!!form.breaks_paid} onChange={e => set('breaks_paid', e.target.checked ? 1 : 0)} />
@@ -740,7 +759,7 @@
                         <input type="number" step="0.1" value={form.rate_value} onChange={e => set('rate_value', parseFloat(e.target.value))} />
                     </div>
                     <div className="form-group">
-                        <label>Stacking Group</label>
+                        <label>Stacking Group <InfoTip text="Supplements in the same group compete — only the highest-priority one wins within a group. Different groups always stack on top of each other. Use Group A for time-of-day (evening, night, weekend), Group B for overtime-related, Group C for special cases." /></label>
                         <select value={form.stacking_group} onChange={e => set('stacking_group', e.target.value)}>
                             <option value="A">Group A: Time/Day</option>
                             <option value="B">Group B: Overtime</option>
@@ -748,7 +767,7 @@
                         </select>
                     </div>
                     <div className="form-group">
-                        <label>Priority (higher wins within group)</label>
+                        <label>Priority <InfoTip text="When two supplement intervals in the same stacking group overlap in time, the one with the higher priority number wins. Only relevant within the same group — different groups always stack." /></label>
                         <input type="number" value={form.priority} onChange={e => set('priority', parseInt(e.target.value))} />
                     </div>
                 </div>
@@ -948,7 +967,7 @@
                     </div>
                     <div className="form-group"><label>Start Date *</label><input type="date" value={form.start_date} onChange={e => set('start_date', e.target.value)} /></div>
                     <div className="form-group"><label>End Date</label><input type="date" value={form.end_date || ''} onChange={e => set('end_date', e.target.value || null)} /></div>
-                    <div className="form-group"><label>Weekly Hours *</label><input type="number" step="0.5" value={form.total_weekly_hours} onChange={e => set('total_weekly_hours', parseFloat(e.target.value))} /></div>
+                    <div className="form-group"><label>Weekly Hours * <InfoTip text="The weekly overtime threshold for this employee. When total hours in a week (or balancing period) exceed this number, overtime is triggered. This is separate from the schedule — the schedule defines daily start/end times, this sets the weekly cap." /></label><input type="number" step="0.5" value={form.total_weekly_hours} onChange={e => set('total_weekly_hours', parseFloat(e.target.value))} /></div>
                     <div className="form-group"><label>Base Hourly Wage (DKK) *</label><input type="number" step="0.01" value={form.base_hourly_wage} onChange={e => set('base_hourly_wage', parseFloat(e.target.value))} /></div>
                     {form.salary_type === 'monthly' && (
                         <div className="form-group"><label>Monthly Salary (DKK)</label><input type="number" step="0.01" value={form.monthly_salary || ''} onChange={e => set('monthly_salary', parseFloat(e.target.value) || null)} /></div>
@@ -967,14 +986,14 @@
                     </div>
                     <div className="form-group"><label>Collective Agreement</label><input value={form.collective_agreement || ''} onChange={e => set('collective_agreement', e.target.value)} /></div>
                     <div className="form-group">
-                        <label>Breaks Paid</label>
+                        <label>Breaks Paid <InfoTip text="'Use rule set' inherits the break policy from the assigned wage rule set. Override with Yes or No for this specific employee if their contract differs from the standard." /></label>
                         <select value={form.breaks_paid} onChange={e => set('breaks_paid', e.target.value)}>
                             <option value="use_rule_set">Use rule set default</option>
                             <option value="yes">Yes</option>
                             <option value="no">No</option>
                         </select>
                     </div>
-                    <div className="form-group"><label>Break Duration Override (min)</label><input type="number" value={form.default_break_duration || ''} onChange={e => set('default_break_duration', parseInt(e.target.value) || null)} placeholder="Use rule set default" /></div>
+                    <div className="form-group"><label>Break Duration Override (min) <InfoTip text="Leave empty to use the rule set's default break duration. Set a value here to override the break length for this specific employee's contract." /></label><input type="number" value={form.default_break_duration || ''} onChange={e => set('default_break_duration', parseInt(e.target.value) || null)} placeholder="Use rule set default" /></div>
                 </div>
                 <button className="btn btn-primary" onClick={save}>{contract ? 'Update Contract' : 'Create Contract'}</button>
             </div>
@@ -1062,7 +1081,7 @@
                     ))}
                 </div>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                    <span style={{fontWeight:600}}>Total: {totalHours.toFixed(1)}h / week</span>
+                    <span style={{fontWeight:600}}>Total: {totalHours.toFixed(1)}h / week <InfoTip text="This is the gross scheduled hours total (before breaks). The schedule defines daily start/end times and which days are 'contracted'. The contract's Weekly Hours field sets the overtime threshold — they work together but are independent settings." /></span>
                     <button className="btn btn-primary" onClick={save}>Save Schedule</button>
                 </div>
             </div>
@@ -1260,7 +1279,7 @@
                             <div className="form-group"><label>Clock Out *</label><input type="time" value={form.clock_out} onChange={e => set('clock_out', e.target.value)} /></div>
                             <div className="form-group"><label>Break (minutes)</label><input type="number" value={form.break_minutes} onChange={e => set('break_minutes', parseInt(e.target.value) || null)} /></div>
                             <div className="form-group">
-                                <label>Employer Cancelled?</label>
+                                <label>Employer Cancelled? <InfoTip text="Toggle ON if the employer cancelled this scheduled shift. The employee may still be entitled to minimum call-in hours or cancellation pay depending on the collective agreement and notice period." /></label>
                                 <label className="toggle" style={{display:'block', marginTop:'4px'}}>
                                     <input type="checkbox" checked={!!form.is_employer_cancelled} onChange={e => set('is_employer_cancelled', e.target.checked ? 1 : 0)} />
                                     <span className="toggle-slider"></span>
