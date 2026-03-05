@@ -153,6 +153,14 @@
         .wage-line { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--gray-100); }
         .wage-line:last-child { border-bottom: 0; }
         .wage-code { font-family: monospace; font-weight: 700; margin-right: 12px; width: 40px; font-size: 13px; }
+        .wage-code-badge { display: inline-flex; align-items: center; gap: 6px; }
+        .wage-code-badge-code { font-family: monospace; font-weight: 700; font-size: 12px; color: var(--wc-color); background: color-mix(in srgb, var(--wc-color) 10%, transparent); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px; }
+        .wage-code-badge-label { font-size: 12px; color: var(--gray-500); font-weight: 400; }
+        .wage-code-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 12px 16px; background: var(--gray-50); border-radius: var(--radius); }
+        .wage-code-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+        .wage-code-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .wage-code-legend-code { font-family: monospace; font-weight: 700; font-size: 11px; color: var(--gray-600); }
+        .wage-code-legend-label { color: var(--gray-500); }
         .wage-desc { flex: 1; font-size: 13px; }
         .wage-hours { width: 80px; text-align: right; font-size: 13px; color: var(--gray-500); }
         .wage-amount { width: 100px; text-align: right; font-weight: 600; font-size: 14px; }
@@ -240,6 +248,31 @@
         W05: '#6d28d9', W06: '#0891b2', W07: '#0d9488', W08: '#be185d',
         W09: '#ea580c', W10: '#65a30d', W11: '#475569'
     };
+
+    const WAGE_CODE_LABELS = {
+        W01: 'Normal wage',
+        W02: 'Overtime Tier 1',
+        W03: 'Overtime Tier 2',
+        W04: 'Evening supplement',
+        W05: 'Night supplement',
+        W06: 'Saturday supplement',
+        W07: 'Sunday supplement',
+        W08: 'Holiday supplement',
+        W09: 'Schedule-change supplement',
+        W10: 'Paid break',
+        W11: 'Employer-cancelled shift'
+    };
+
+    function WageCodeBadge({ code, showLabel }) {
+        const color = WAGE_CODE_COLORS[code] || '#6b7280';
+        const label = WAGE_CODE_LABELS[code] || code;
+        return (
+            <span className="wage-code-badge" style={{'--wc-color': color}}>
+                <span className="wage-code-badge-code">{code}</span>
+                {showLabel && <span className="wage-code-badge-label">{label}</span>}
+            </span>
+        );
+    }
 
     // ===== Info Tooltip Component =====
     function InfoTip({ text }) {
@@ -405,8 +438,8 @@
                                         <tbody>
                                             {data.wage_code_summary.map((wc, i) => (
                                                 <tr key={i}>
-                                                    <td><span style={{color: WAGE_CODE_COLORS[wc.wage_code], fontWeight: 700, fontFamily: 'monospace'}}>{wc.wage_code}</span></td>
-                                                    <td>{wc.wage_type}</td>
+                                                    <td><WageCodeBadge code={wc.wage_code} /></td>
+                                                    <td>{WAGE_CODE_LABELS[wc.wage_code] || wc.wage_type}</td>
                                                     <td>{fmt.hours(wc.total_hours)}</td>
                                                     <td style={{fontWeight:600}}>{fmt.currency(wc.total_amount)}</td>
                                                 </tr>
@@ -417,6 +450,24 @@
                             </div>
                         </div>
                     )}
+
+                    <div className="card">
+                        <div className="card-header"><h3>Wage Code Reference</h3></div>
+                        <div className="card-body">
+                            <div className="wage-code-legend">
+                                {Object.entries(WAGE_CODE_LABELS).map(([code, label]) => (
+                                    <div key={code} className="wage-code-legend-item">
+                                        <span className="wage-code-legend-dot" style={{background: WAGE_CODE_COLORS[code]}}></span>
+                                        <span className="wage-code-legend-code">{code}</span>
+                                        <span className="wage-code-legend-label">{label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <p style={{fontSize:'11px', color:'var(--gray-400)', margin:'10px 0 0 0'}}>
+                                Codes W01–W03, W09–W11 are assigned automatically by the calculation engine. Codes W04–W08 are configurable per supplement interval in each rule set.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -699,7 +750,7 @@
                                     <td>{int.rate_type === 'percentage' ? `+${int.rate_value}%` : `${int.rate_value} DKK/h`}</td>
                                     <td><span className="badge badge-blue">Group {int.stacking_group}</span></td>
                                     <td>{int.priority}</td>
-                                    <td><span style={{fontFamily:'monospace', fontWeight:700, color: WAGE_CODE_COLORS[int.wage_code]}}>{int.wage_code}</span></td>
+                                    <td><WageCodeBadge code={int.wage_code} /></td>
                                     <td>
                                         <div className="btn-group">
                                             <button className="btn btn-sm btn-outline" onClick={() => setEditing(int)}>Edit</button>
@@ -742,7 +793,10 @@
                     <div className="form-group">
                         <label>Wage Code</label>
                         <select value={form.wage_code} onChange={e => set('wage_code', e.target.value)}>
-                            {['W01','W04','W05','W06','W07','W08','W09'].map(c => <option key={c} value={c}>{c}</option>)}
+                            {Object.entries(WAGE_CODE_LABELS).map(([c, label]) => {
+                                const disabled = ['W01','W02','W03','W10','W11'].includes(c);
+                                return <option key={c} value={c} disabled={disabled} style={disabled ? {color:'#9ca3af'} : {}}>{c} — {label}{disabled ? ' (auto)' : ''}</option>;
+                            })}
                         </select>
                     </div>
                     <div className="form-group"><label>Start Time</label><input type="time" value={form.start_time} onChange={e => set('start_time', e.target.value)} /></div>
@@ -1321,7 +1375,7 @@
                                 <div key={i} className="wage-line">
                                     <span className="wage-code" style={{color: WAGE_CODE_COLORS[line.wage_code]}}>{line.wage_code}</span>
                                     <span className="wage-desc">
-                                        {line.wage_type}
+                                        {WAGE_CODE_LABELS[line.wage_code] || line.wage_type}
                                         {line.supplement_pct > 0 && <span style={{color:'var(--gray-400)', marginLeft:'6px'}}>+{line.supplement_pct}%</span>}
                                     </span>
                                     <span className="wage-hours">{fmt.hours(line.hours)}</span>
@@ -1402,7 +1456,7 @@
                                         {data.lines.map((l, i) => (
                                             <tr key={i}>
                                                 <td>{fmt.date(l.date)}</td>
-                                                <td><span style={{fontFamily:'monospace', fontWeight:700, color:WAGE_CODE_COLORS[l.wage_code]}}>{l.wage_code}</span></td>
+                                                <td><WageCodeBadge code={l.wage_code} /></td>
                                                 <td>{l.wage_type}</td>
                                                 <td>{fmt.hours(l.hours)}</td>
                                                 <td>{fmt.currency(l.base_rate)}</td>
@@ -1525,7 +1579,7 @@
                                         <div key={i} className="wage-line">
                                             <span className="wage-code" style={{color: WAGE_CODE_COLORS[line.wage_code]}}>{line.wage_code}</span>
                                             <span className="wage-desc">
-                                                {line.wage_type}
+                                                {WAGE_CODE_LABELS[line.wage_code] || line.wage_type}
                                                 {line.notes && <span style={{color:'var(--gray-400)', fontSize:'11px', marginLeft:'8px'}}>({line.notes})</span>}
                                             </span>
                                             <span className="wage-hours">{fmt.hours(line.hours)}</span>
