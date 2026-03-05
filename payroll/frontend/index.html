@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fogito HR Payroll System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #dbeafe;
+            --success: #16a34a;
+            --success-light: #dcfce7;
+            --warning: #d97706;
+            --warning-light: #fef3c7;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-50); color: var(--gray-800); line-height: 1.5; }
+
+        .app-layout { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; background: var(--gray-900); color: white; padding: 0; flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; }
+        .sidebar-header { padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+        .sidebar-header p { font-size: 11px; color: var(--gray-400); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
+        .sidebar-nav { padding: 12px; flex: 1; overflow-y: auto; }
+        .nav-section { margin-bottom: 8px; }
+        .nav-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gray-500); padding: 8px 12px 4px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 6px; cursor: pointer; transition: all 0.15s; font-size: 14px; color: var(--gray-300); }
+        .nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+        .nav-item.active { background: var(--primary); color: white; font-weight: 500; }
+        .nav-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .nav-badge { margin-left: auto; background: var(--danger); color: white; font-size: 11px; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+
+        /* Main content */
+        .main-content { flex: 1; margin-left: 260px; min-height: 100vh; }
+        .page-header { background: white; border-bottom: 1px solid var(--gray-200); padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+        .page-header h2 { font-size: 20px; font-weight: 600; color: var(--gray-900); }
+        .page-body { padding: 24px 32px; max-width: 1400px; }
+
+        /* Cards */
+        .card { background: white; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); margin-bottom: 16px; }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; }
+        .card-header h3 { font-size: 15px; font-weight: 600; }
+        .card-body { padding: 20px; }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+        .stat-label { font-size: 12px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--gray-900); margin-top: 4px; }
+        .stat-sub { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+
+        /* Tables */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        thead th { background: var(--gray-50); padding: 10px 16px; text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-500); border-bottom: 2px solid var(--gray-200); white-space: nowrap; }
+        tbody td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); }
+        tbody tr:hover { background: var(--gray-50); }
+
+        /* Forms */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--gray-700); margin-bottom: 4px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 14px; transition: border-color 0.15s; background: white; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .form-row { display: flex; gap: 12px; align-items: end; }
+        .form-row .form-group { flex: 1; }
+
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; white-space: nowrap; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #15803d; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-outline { background: white; border-color: var(--gray-300); color: var(--gray-700); }
+        .btn-outline:hover { background: var(--gray-50); border-color: var(--gray-400); }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* Badges */
+        .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-blue { background: var(--primary-light); color: var(--primary); }
+        .badge-green { background: var(--success-light); color: var(--success); }
+        .badge-yellow { background: var(--warning-light); color: var(--warning); }
+        .badge-red { background: var(--danger-light); color: var(--danger); }
+
+        /* Toggle */
+        .toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .toggle input { display: none; }
+        .toggle-slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--gray-300); border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        .toggle-slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+        .toggle input:checked + .toggle-slider { background: var(--primary); }
+        .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+        /* Schedule grid */
+        .schedule-grid { display: grid; grid-template-columns: auto repeat(7, 1fr); gap: 1px; background: var(--gray-200); border-radius: var(--radius); overflow: hidden; }
+        .schedule-cell { background: white; padding: 10px 12px; font-size: 13px; }
+        .schedule-header { background: var(--gray-50); font-weight: 600; text-align: center; }
+        .schedule-day-active { background: var(--primary-light); }
+        .schedule-day-off { background: var(--gray-50); color: var(--gray-400); text-align: center; font-style: italic; }
+
+        /* Wage breakdown */
+        .wage-breakdown { border: 2px solid var(--primary-light); border-radius: var(--radius); overflow: hidden; }
+        .wage-breakdown .wb-header { background: var(--primary); color: white; padding: 12px 16px; font-weight: 600; }
+        .wage-line { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--gray-100); }
+        .wage-line:last-child { border-bottom: 0; }
+        .wage-code { font-family: monospace; font-weight: 700; margin-right: 12px; width: 40px; font-size: 13px; }
+        .wage-desc { flex: 1; font-size: 13px; }
+        .wage-hours { width: 80px; text-align: right; font-size: 13px; color: var(--gray-500); }
+        .wage-amount { width: 100px; text-align: right; font-weight: 600; font-size: 14px; }
+        .wage-total { background: var(--gray-50); font-weight: 700; font-size: 15px; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: flex-start; justify-content: center; padding: 60px 20px; overflow-y: auto; }
+        .modal { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); width: 100%; max-width: 700px; }
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--gray-400); padding: 4px 8px; border-radius: 4px; }
+        .modal-close:hover { background: var(--gray-100); color: var(--gray-600); }
+        .modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; justify-content: flex-end; gap: 8px; }
+
+        /* Alerts / Info boxes */
+        .alert { padding: 12px 16px; border-radius: var(--radius); margin-bottom: 16px; font-size: 13px; display: flex; gap: 8px; }
+        .alert-info { background: var(--primary-light); color: var(--primary-dark); border: 1px solid #93c5fd; }
+        .alert-warning { background: var(--warning-light); color: #92400e; border: 1px solid #fcd34d; }
+        .alert-danger { background: var(--danger-light); color: #991b1b; border: 1px solid #fca5a5; }
+
+        /* Tabs */
+        .tabs { display: flex; border-bottom: 2px solid var(--gray-200); margin-bottom: 20px; gap: 0; }
+        .tab { padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--gray-500); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+        .tab:hover { color: var(--gray-700); }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 48px 20px; color: var(--gray-400); }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state p { margin-bottom: 16px; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header h1, .sidebar-header p, .nav-section-title, .nav-item span { display: none; }
+            .nav-item { justify-content: center; }
+            .main-content { margin-left: 60px; }
+            .page-body { padding: 16px; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+    const { useState, useEffect, useCallback, useMemo, createContext, useContext } = React;
+
+    // ===== API Helper =====
+    const API_BASE = '/api';
+
+    async function api(endpoint, method = 'GET', body = null) {
+        const opts = { method, headers: { 'Content-Type': 'application/json' } };
+        if (body && method !== 'GET') opts.body = JSON.stringify(body);
+        let url = API_BASE + endpoint;
+        const res = await fetch(url, opts);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        return data;
+    }
+
+    // ===== Formatters =====
+    const fmt = {
+        currency: (v) => new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK', minimumFractionDigits: 2 }).format(v || 0),
+        hours: (v) => (v || 0).toFixed(2) + 'h',
+        pct: (v) => (v || 0).toFixed(0) + '%',
+        date: (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '-',
+    };
+
+    const DAYS = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const DAYS_SHORT = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    const WAGE_CODE_COLORS = {
+        W01: '#2563eb', W02: '#d97706', W03: '#dc2626', W04: '#7c3aed',
+        W05: '#6d28d9', W06: '#0891b2', W07: '#0d9488', W08: '#be185d',
+        W09: '#ea580c', W10: '#65a30d', W11: '#475569'
+    };
+
+    // ===== Context =====
+    const AppContext = createContext();
+
+    // ===== App =====
+    function App() {
+        const [page, setPage] = useState('dashboard');
+        const [ruleSets, setRuleSets] = useState([]);
+        const [employees, setEmployees] = useState([]);
+        const [warnings, setWarnings] = useState([]);
+        const [loading, setLoading] = useState(true);
+
+        const loadData = useCallback(async () => {
+            try {
+                const [rs, emp, warn] = await Promise.all([
+                    api('/rule-sets'),
+                    api('/employees'),
+                    api('/warnings')
+                ]);
+                setRuleSets(rs);
+                setEmployees(emp);
+                setWarnings(warn);
+            } catch (e) { console.error(e); }
+            setLoading(false);
+        }, []);
+
+        useEffect(() => { loadData(); }, [loadData]);
+
+        const ctx = { ruleSets, employees, warnings, loadData, page, setPage };
+
+        return (
+            <AppContext.Provider value={ctx}>
+                <div className="app-layout">
+                    <Sidebar />
+                    <div className="main-content">
+                        {page === 'dashboard' && <DashboardPage />}
+                        {page === 'rule-sets' && <RuleSetsPage />}
+                        {page === 'employees' && <EmployeesPage />}
+                        {page === 'time-entries' && <TimeEntriesPage />}
+                        {page === 'payroll' && <PayrollPage />}
+                        {page === 'simulator' && <SimulatorPage />}
+                        {page === 'holidays' && <HolidaysPage />}
+                        {page === 'warnings' && <WarningsPage />}
+                    </div>
+                </div>
+            </AppContext.Provider>
+        );
+    }
+
+    // ===== Sidebar =====
+    function Sidebar() {
+        const { page, setPage, warnings } = useContext(AppContext);
+        const nav = [
+            { section: 'Overview', items: [
+                { id: 'dashboard', icon: '📊', label: 'Dashboard' },
+            ]},
+            { section: 'Configuration', items: [
+                { id: 'rule-sets', icon: '⚙️', label: 'Wage Rule Sets' },
+                { id: 'holidays', icon: '📅', label: 'Holiday Calendar' },
+            ]},
+            { section: 'HR Management', items: [
+                { id: 'employees', icon: '👥', label: 'Employees' },
+                { id: 'time-entries', icon: '🕐', label: 'Time Entries' },
+            ]},
+            { section: 'Payroll', items: [
+                { id: 'payroll', icon: '💰', label: 'Payroll Results' },
+                { id: 'simulator', icon: '🧮', label: 'Wage Simulator' },
+            ]},
+            { section: 'System', items: [
+                { id: 'warnings', icon: '⚠️', label: 'Warnings', badge: warnings.length || null },
+            ]},
+        ];
+
+        return (
+            <div className="sidebar">
+                <div className="sidebar-header">
+                    <h1>Fogito HR</h1>
+                    <p>Payroll System</p>
+                </div>
+                <nav className="sidebar-nav">
+                    {nav.map(section => (
+                        <div key={section.section} className="nav-section">
+                            <div className="nav-section-title">{section.section}</div>
+                            {section.items.map(item => (
+                                <div key={item.id}
+                                    className={`nav-item ${page === item.id ? 'active' : ''}`}
+                                    onClick={() => setPage(item.id)}>
+                                    <span className="nav-icon">{item.icon}</span>
+                                    <span>{item.label}</span>
+                                    {item.badge && <span className="nav-badge">{item.badge}</span>}
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                </nav>
+            </div>
+        );
+    }
+
+    // ===== Dashboard =====
+    function DashboardPage() {
+        const [data, setData] = useState(null);
+        useEffect(() => { api('/dashboard').then(setData).catch(console.error); }, []);
+
+        if (!data) return <div className="page-body"><p>Loading...</p></div>;
+
+        return (
+            <div>
+                <div className="page-header"><h2>Dashboard</h2></div>
+                <div className="page-body">
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <div className="stat-label">Employees</div>
+                            <div className="stat-value">{data.employee_count}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Rule Sets</div>
+                            <div className="stat-value">{data.rule_set_count}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Time Entries (week)</div>
+                            <div className="stat-value">{data.time_entry_count}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Total Wages (week)</div>
+                            <div className="stat-value">{fmt.currency(data.total_wages)}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Warnings</div>
+                            <div className="stat-value" style={{color: data.unresolved_warnings > 0 ? 'var(--danger)' : 'var(--success)'}}>{data.unresolved_warnings}</div>
+                        </div>
+                    </div>
+
+                    {data.wage_code_summary.length > 0 && (
+                        <div className="card">
+                            <div className="card-header"><h3>Wage Code Summary (This Week)</h3></div>
+                            <div className="card-body">
+                                <div className="table-wrap">
+                                    <table>
+                                        <thead><tr><th>Code</th><th>Type</th><th>Total Hours</th><th>Total Amount</th></tr></thead>
+                                        <tbody>
+                                            {data.wage_code_summary.map((wc, i) => (
+                                                <tr key={i}>
+                                                    <td><span style={{color: WAGE_CODE_COLORS[wc.wage_code], fontWeight: 700, fontFamily: 'monospace'}}>{wc.wage_code}</span></td>
+                                                    <td>{wc.wage_type}</td>
+                                                    <td>{fmt.hours(wc.total_hours)}</td>
+                                                    <td style={{fontWeight:600}}>{fmt.currency(wc.total_amount)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // ===== Wage Rule Sets =====
+    function RuleSetsPage() {
+        const { ruleSets, loadData } = useContext(AppContext);
+        const [editing, setEditing] = useState(null);
+        const [showForm, setShowForm] = useState(false);
+
+        const handleSave = async (data) => {
+            if (data.id) {
+                await api(`/rule-sets/${data.id}`, 'PUT', data);
+            } else {
+                await api('/rule-sets', 'POST', data);
+            }
+            await loadData();
+            setShowForm(false);
+            setEditing(null);
+        };
+
+        const handleDelete = async (id) => {
+            if (confirm('Delete this rule set?')) {
+                await api(`/rule-sets/${id}`, 'DELETE');
+                await loadData();
+            }
+        };
+
+        return (
+            <div>
+                <div className="page-header">
+                    <h2>Wage Rule Sets</h2>
+                    <button className="btn btn-primary" onClick={() => { setEditing(null); setShowForm(true); }}>+ New Rule Set</button>
+                </div>
+                <div className="page-body">
+                    <div className="alert alert-info">
+                        A Wage Rule Set is the main container for all wage calculation rules. Each employee is assigned exactly one rule set in their contract.
+                    </div>
+                    {ruleSets.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="empty-icon">⚙️</div>
+                            <p>No rule sets configured yet.</p>
+                            <button className="btn btn-primary" onClick={() => setShowForm(true)}>Create First Rule Set</button>
+                        </div>
+                    ) : (
+                        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(340px, 1fr))', gap:'16px'}}>
+                            {ruleSets.map(rs => (
+                                <div key={rs.id} className="card" style={{cursor:'pointer'}} onClick={() => { setEditing(rs); setShowForm(true); }}>
+                                    <div className="card-header">
+                                        <h3>{rs.name}</h3>
+                                        <span className="badge badge-blue">{rs.employee_count || 0} employees</span>
+                                    </div>
+                                    <div className="card-body" style={{fontSize:'13px'}}>
+                                        <p style={{color:'var(--gray-500)', marginBottom:'12px'}}>{rs.description || 'No description'}</p>
+                                        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px'}}>
+                                            <div><strong>OT Model:</strong> {rs.overtime_model}</div>
+                                            <div><strong>Trigger:</strong> {rs.overtime_trigger_mode}</div>
+                                            <div><strong>Balancing:</strong> {rs.balancing_mode}</div>
+                                            <div><strong>Stacking:</strong> {rs.stacking_mode}</div>
+                                            <div><strong>Breaks paid:</strong> {rs.breaks_paid ? 'Yes' : 'No'}</div>
+                                            <div><strong>Break duration:</strong> {rs.default_break_duration}min</div>
+                                        </div>
+                                        <div style={{marginTop:'12px', display:'flex', gap:'8px'}}>
+                                            <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); setEditing(rs); setShowForm(true); }}>Edit</button>
+                                            <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(rs.id); }}>Delete</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                {showForm && <RuleSetModal ruleSet={editing} onSave={handleSave} onClose={() => { setShowForm(false); setEditing(null); }} />}
+            </div>
+        );
+    }
+
+    function RuleSetModal({ ruleSet, onSave, onClose }) {
+        const [form, setForm] = useState(ruleSet || {
+            name: '', description: '', overtime_model: 'tiered', overtime_trigger_mode: 'combined',
+            balancing_mode: 'none', balancing_period_weeks: null, stacking_mode: 'cumulative',
+            holiday_calendar: 'danish', breaks_paid: 0, default_break_duration: 30,
+            tier1_threshold: 3, tier1_rate: 50, tier2_rate: 100, flat_overtime_rate: 50
+        });
+        const [tab, setTab] = useState('general');
+        const [intervals, setIntervals] = useState([]);
+
+        useEffect(() => {
+            if (ruleSet?.id) {
+                api(`/rule-sets/${ruleSet.id}/intervals`).then(setIntervals).catch(console.error);
+            }
+        }, [ruleSet]);
+
+        const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+
+        return (
+            <div className="modal-overlay" onClick={onClose}>
+                <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'800px'}}>
+                    <div className="modal-header">
+                        <h3>{ruleSet ? 'Edit Rule Set' : 'New Rule Set'}</h3>
+                        <button className="modal-close" onClick={onClose}>&times;</button>
+                    </div>
+                    <div className="tabs" style={{padding:'0 24px'}}>
+                        <div className={`tab ${tab === 'general' ? 'active' : ''}`} onClick={() => setTab('general')}>General</div>
+                        <div className={`tab ${tab === 'overtime' ? 'active' : ''}`} onClick={() => setTab('overtime')}>Overtime</div>
+                        <div className={`tab ${tab === 'breaks' ? 'active' : ''}`} onClick={() => setTab('breaks')}>Breaks</div>
+                        {ruleSet?.id && <div className={`tab ${tab === 'intervals' ? 'active' : ''}`} onClick={() => setTab('intervals')}>Supplement Intervals</div>}
+                    </div>
+                    <div className="modal-body">
+                        {tab === 'general' && (
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label>Rule Set Name *</label>
+                                    <input value={form.name} onChange={e => set('name', e.target.value)} placeholder='e.g. "3F Overenskomst"' />
+                                </div>
+                                <div className="form-group">
+                                    <label>Holiday Calendar</label>
+                                    <select value={form.holiday_calendar} onChange={e => set('holiday_calendar', e.target.value)}>
+                                        <option value="danish">Danish</option>
+                                        <option value="swedish">Swedish</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                </div>
+                                <div className="form-group" style={{gridColumn:'1/-1'}}>
+                                    <label>Description</label>
+                                    <textarea value={form.description} onChange={e => set('description', e.target.value)} rows="2" placeholder="Notes about which employees this applies to" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Stacking Mode</label>
+                                    <select value={form.stacking_mode} onChange={e => set('stacking_mode', e.target.value)}>
+                                        <option value="cumulative">Cumulative (stack all groups)</option>
+                                        <option value="highest_wins">Highest wins</option>
+                                        <option value="supplement_replaces_overtime">Supplement replaces overtime</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+                        {tab === 'overtime' && (
+                            <div>
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label>Overtime Model</label>
+                                        <select value={form.overtime_model} onChange={e => set('overtime_model', e.target.value)}>
+                                            <option value="tiered">Tiered (Tier 1 + Tier 2)</option>
+                                            <option value="flat">Flat rate</option>
+                                            <option value="none">No overtime</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Overtime Trigger Mode</label>
+                                        <select value={form.overtime_trigger_mode} onChange={e => set('overtime_trigger_mode', e.target.value)}>
+                                            <option value="combined">Combined (recommended)</option>
+                                            <option value="per_day">Per-day</option>
+                                            <option value="weekly">Weekly threshold</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Balancing Mode</label>
+                                        <select value={form.balancing_mode} onChange={e => set('balancing_mode', e.target.value)}>
+                                            <option value="none">None (strict per-day)</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Monthly</option>
+                                            <option value="custom">Custom period</option>
+                                        </select>
+                                    </div>
+                                    {form.balancing_mode === 'custom' && (
+                                        <div className="form-group">
+                                            <label>Custom Period (weeks)</label>
+                                            <input type="number" value={form.balancing_period_weeks || ''} onChange={e => set('balancing_period_weeks', parseInt(e.target.value) || null)} />
+                                        </div>
+                                    )}
+                                </div>
+                                {form.overtime_model === 'tiered' && (
+                                    <div className="card" style={{marginTop:'16px'}}>
+                                        <div className="card-header"><h3>Tier Settings</h3></div>
+                                        <div className="card-body">
+                                            <div className="form-grid">
+                                                <div className="form-group">
+                                                    <label>Tier 1 Threshold (hours)</label>
+                                                    <input type="number" step="0.5" value={form.tier1_threshold} onChange={e => set('tier1_threshold', parseFloat(e.target.value))} />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Tier 1 Rate (%)</label>
+                                                    <input type="number" value={form.tier1_rate} onChange={e => set('tier1_rate', parseFloat(e.target.value))} />
+                                                    <small style={{color:'var(--gray-400)'}}>50% = 1.5x base rate</small>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Tier 2 Rate (%)</label>
+                                                    <input type="number" value={form.tier2_rate} onChange={e => set('tier2_rate', parseFloat(e.target.value))} />
+                                                    <small style={{color:'var(--gray-400)'}}>100% = 2.0x base rate</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {form.overtime_model === 'flat' && (
+                                    <div className="form-group" style={{marginTop:'16px'}}>
+                                        <label>Flat Overtime Rate (%)</label>
+                                        <input type="number" value={form.flat_overtime_rate} onChange={e => set('flat_overtime_rate', parseFloat(e.target.value))} />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {tab === 'breaks' && (
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label>Breaks Paid (default)</label>
+                                    <div style={{display:'flex', alignItems:'center', gap:'12px', marginTop:'4px'}}>
+                                        <label className="toggle">
+                                            <input type="checkbox" checked={!!form.breaks_paid} onChange={e => set('breaks_paid', e.target.checked ? 1 : 0)} />
+                                            <span className="toggle-slider"></span>
+                                        </label>
+                                        <span style={{fontSize:'13px', color:'var(--gray-500)'}}>{form.breaks_paid ? 'Yes (public sector)' : 'No (private sector)'}</span>
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Default Break Duration (minutes)</label>
+                                    <input type="number" value={form.default_break_duration} onChange={e => set('default_break_duration', parseInt(e.target.value))} />
+                                </div>
+                            </div>
+                        )}
+                        {tab === 'intervals' && ruleSet?.id && (
+                            <IntervalEditor ruleSetId={ruleSet.id} intervals={intervals} setIntervals={setIntervals} />
+                        )}
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+                        <button className="btn btn-primary" onClick={() => onSave(form)}>Save Rule Set</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function IntervalEditor({ ruleSetId, intervals, setIntervals }) {
+        const [editing, setEditing] = useState(null);
+
+        const reload = async () => {
+            const data = await api(`/rule-sets/${ruleSetId}/intervals`);
+            setIntervals(data);
+        };
+
+        const saveInterval = async (data) => {
+            if (data.id) {
+                await api(`/rule-sets/${ruleSetId}/intervals/${data.id}`, 'PUT', data);
+            } else {
+                await api(`/rule-sets/${ruleSetId}/intervals`, 'POST', data);
+            }
+            await reload();
+            setEditing(null);
+        };
+
+        const deleteInterval = async (id) => {
+            await api(`/rule-sets/${ruleSetId}/intervals/${id}`, 'DELETE');
+            await reload();
+        };
+
+        const defaultInterval = {
+            name: '', start_time: '00:00', end_time: '24:00', applies_to_days: '1,2,3,4,5',
+            applies_to_holidays: 0, rate_type: 'percentage', rate_value: 0,
+            stacking_group: 'A', priority: 1, wage_code: 'W04'
+        };
+
+        return (
+            <div>
+                <div style={{display:'flex', justifyContent:'space-between', marginBottom:'12px'}}>
+                    <p style={{fontSize:'13px', color:'var(--gray-500)'}}>Define time-of-day supplement intervals for the 24h clock.</p>
+                    <button className="btn btn-sm btn-primary" onClick={() => setEditing(defaultInterval)}>+ Add Interval</button>
+                </div>
+                <div className="table-wrap">
+                    <table>
+                        <thead><tr><th>Name</th><th>Time</th><th>Days</th><th>Rate</th><th>Group</th><th>Priority</th><th>Code</th><th></th></tr></thead>
+                        <tbody>
+                            {intervals.map(int => (
+                                <tr key={int.id}>
+                                    <td style={{fontWeight:500}}>{int.name}</td>
+                                    <td>{int.start_time}–{int.end_time}</td>
+                                    <td style={{fontSize:'12px'}}>{int.applies_to_holidays ? '🎄 Holidays' : int.applies_to_days.split(',').map(d => DAYS_SHORT[d]).join(', ')}</td>
+                                    <td>{int.rate_type === 'percentage' ? `+${int.rate_value}%` : `${int.rate_value} DKK/h`}</td>
+                                    <td><span className="badge badge-blue">Group {int.stacking_group}</span></td>
+                                    <td>{int.priority}</td>
+                                    <td><span style={{fontFamily:'monospace', fontWeight:700, color: WAGE_CODE_COLORS[int.wage_code]}}>{int.wage_code}</span></td>
+                                    <td>
+                                        <div className="btn-group">
+                                            <button className="btn btn-sm btn-outline" onClick={() => setEditing(int)}>Edit</button>
+                                            <button className="btn btn-sm btn-danger" onClick={() => deleteInterval(int.id)}>×</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                {editing && <IntervalForm interval={editing} onSave={saveInterval} onClose={() => setEditing(null)} />}
+            </div>
+        );
+    }
+
+    function IntervalForm({ interval, onSave, onClose }) {
+        const [form, setForm] = useState({...interval});
+        const set = (f, v) => setForm(prev => ({...prev, [f]: v}));
+
+        const dayOptions = [
+            {v: '1', l: 'Mon'}, {v: '2', l: 'Tue'}, {v: '3', l: 'Wed'},
+            {v: '4', l: 'Thu'}, {v: '5', l: 'Fri'}, {v: '6', l: 'Sat'}, {v: '7', l: 'Sun'}
+        ];
+        const selectedDays = (form.applies_to_days || '').split(',').filter(Boolean);
+        const toggleDay = (d) => {
+            const days = new Set(selectedDays);
+            days.has(d) ? days.delete(d) : days.add(d);
+            set('applies_to_days', Array.from(days).sort().join(','));
+        };
+
+        return (
+            <div style={{background:'var(--gray-50)', padding:'16px', borderRadius:'var(--radius)', marginTop:'16px', border:'1px solid var(--gray-200)'}}>
+                <h4 style={{marginBottom:'12px'}}>{interval.id ? 'Edit Interval' : 'New Interval'}</h4>
+                <div className="form-grid">
+                    <div className="form-group">
+                        <label>Name</label>
+                        <input value={form.name} onChange={e => set('name', e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                        <label>Wage Code</label>
+                        <select value={form.wage_code} onChange={e => set('wage_code', e.target.value)}>
+                            {['W01','W04','W05','W06','W07','W08','W09'].map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                    </div>
+                    <div className="form-group"><label>Start Time</label><input type="time" value={form.start_time} onChange={e => set('start_time', e.target.value)} /></div>
+                    <div className="form-group"><label>End Time</label><input value={form.end_time} onChange={e => set('end_time', e.target.value)} placeholder="e.g. 24:00" /></div>
+                    <div className="form-group">
+                        <label>Rate Type</label>
+                        <select value={form.rate_type} onChange={e => set('rate_type', e.target.value)}>
+                            <option value="percentage">Percentage of base</option>
+                            <option value="fixed">Fixed DKK/h</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Rate Value</label>
+                        <input type="number" step="0.1" value={form.rate_value} onChange={e => set('rate_value', parseFloat(e.target.value))} />
+                    </div>
+                    <div className="form-group">
+                        <label>Stacking Group</label>
+                        <select value={form.stacking_group} onChange={e => set('stacking_group', e.target.value)}>
+                            <option value="A">Group A: Time/Day</option>
+                            <option value="B">Group B: Overtime</option>
+                            <option value="C">Group C: Special</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Priority (higher wins within group)</label>
+                        <input type="number" value={form.priority} onChange={e => set('priority', parseInt(e.target.value))} />
+                    </div>
+                </div>
+                <div className="form-group">
+                    <label>Applies to Days</label>
+                    <div style={{display:'flex', gap:'6px', marginTop:'4px', flexWrap:'wrap'}}>
+                        {dayOptions.map(d => (
+                            <button key={d.v} className={`btn btn-sm ${selectedDays.includes(d.v) ? 'btn-primary' : 'btn-outline'}`}
+                                onClick={() => toggleDay(d.v)}>{d.l}</button>
+                        ))}
+                    </div>
+                </div>
+                <div className="form-group">
+                    <label style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                        <input type="checkbox" checked={!!form.applies_to_holidays} onChange={e => set('applies_to_holidays', e.target.checked ? 1 : 0)} />
+                        Applies to public holidays
+                    </label>
+                </div>
+                <div className="btn-group">
+                    <button className="btn btn-primary" onClick={() => onSave(form)}>Save Interval</button>
+                    <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+                </div>
+            </div>
+        );
+    }
+
+    // ===== Employees =====
+    function EmployeesPage() {
+        const { employees, ruleSets, loadData } = useContext(AppContext);
+        const [selectedEmp, setSelectedEmp] = useState(null);
+        const [showForm, setShowForm] = useState(false);
+
+        const saveEmployee = async (data) => {
+            if (data.id) {
+                await api(`/employees/${data.id}`, 'PUT', data);
+            } else {
+                const res = await api('/employees', 'POST', data);
+                data.id = res.id;
+            }
+            await loadData();
+            setShowForm(false);
+        };
+
+        const deleteEmp = async (id) => {
+            if (confirm('Delete this employee and all their data?')) {
+                await api(`/employees/${id}`, 'DELETE');
+                await loadData();
+                setSelectedEmp(null);
+            }
+        };
+
+        return (
+            <div>
+                <div className="page-header">
+                    <h2>Employees</h2>
+                    <button className="btn btn-primary" onClick={() => { setSelectedEmp(null); setShowForm(true); }}>+ Add Employee</button>
+                </div>
+                <div className="page-body">
+                    {employees.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="empty-icon">👥</div>
+                            <p>No employees yet.</p>
+                            <button className="btn btn-primary" onClick={() => setShowForm(true)}>Add First Employee</button>
+                        </div>
+                    ) : (
+                        <div className="card">
+                            <div className="table-wrap">
+                                <table>
+                                    <thead><tr><th>Employee</th><th>Number</th><th>Contract</th><th>Weekly Hours</th><th>Hourly Rate</th><th>Rule Set</th><th></th></tr></thead>
+                                    <tbody>
+                                        {employees.map(emp => (
+                                            <tr key={emp.id}>
+                                                <td style={{fontWeight:500}}>{emp.first_name} {emp.last_name}</td>
+                                                <td>{emp.employee_number || '-'}</td>
+                                                <td><span className="badge badge-green">{(emp.contract_type || 'none').replace('_', ' ')}</span></td>
+                                                <td>{emp.total_weekly_hours || '-'}h</td>
+                                                <td>{emp.base_hourly_wage ? fmt.currency(emp.base_hourly_wage) : '-'}</td>
+                                                <td>{emp.rule_set_name || '-'}</td>
+                                                <td>
+                                                    <div className="btn-group">
+                                                        <button className="btn btn-sm btn-primary" onClick={() => setSelectedEmp(emp)}>Manage</button>
+                                                        <button className="btn btn-sm btn-danger" onClick={() => deleteEmp(emp.id)}>Delete</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                {showForm && <EmployeeFormModal onSave={saveEmployee} onClose={() => setShowForm(false)} />}
+                {selectedEmp && <EmployeeDetailModal empId={selectedEmp.id} onClose={() => { setSelectedEmp(null); loadData(); }} />}
+            </div>
+        );
+    }
+
+    function EmployeeFormModal({ onSave, onClose }) {
+        const [form, setForm] = useState({ first_name: '', last_name: '', email: '', employee_number: '' });
+        const set = (f, v) => setForm(prev => ({...prev, [f]: v}));
+
+        return (
+            <div className="modal-overlay" onClick={onClose}>
+                <div className="modal" onClick={e => e.stopPropagation()}>
+                    <div className="modal-header"><h3>New Employee</h3><button className="modal-close" onClick={onClose}>&times;</button></div>
+                    <div className="modal-body">
+                        <div className="form-grid">
+                            <div className="form-group"><label>First Name *</label><input value={form.first_name} onChange={e => set('first_name', e.target.value)} /></div>
+                            <div className="form-group"><label>Last Name *</label><input value={form.last_name} onChange={e => set('last_name', e.target.value)} /></div>
+                            <div className="form-group"><label>Email</label><input type="email" value={form.email} onChange={e => set('email', e.target.value)} /></div>
+                            <div className="form-group"><label>Employee Number</label><input value={form.employee_number} onChange={e => set('employee_number', e.target.value)} /></div>
+                        </div>
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+                        <button className="btn btn-primary" onClick={() => onSave(form)}>Save</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function EmployeeDetailModal({ empId, onClose }) {
+        const { ruleSets } = useContext(AppContext);
+        const [emp, setEmp] = useState(null);
+        const [tab, setTab] = useState('contract');
+
+        const load = async () => {
+            const data = await api(`/employees/${empId}`);
+            setEmp(data);
+        };
+        useEffect(() => { load(); }, [empId]);
+
+        if (!emp) return null;
+
+        return (
+            <div className="modal-overlay" onClick={onClose}>
+                <div className="modal" style={{maxWidth:'900px'}} onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                        <h3>{emp.first_name} {emp.last_name}</h3>
+                        <button className="modal-close" onClick={onClose}>&times;</button>
+                    </div>
+                    <div className="tabs" style={{padding:'0 24px'}}>
+                        <div className={`tab ${tab === 'contract' ? 'active' : ''}`} onClick={() => setTab('contract')}>Contract & Wage</div>
+                        <div className={`tab ${tab === 'schedule' ? 'active' : ''}`} onClick={() => setTab('schedule')}>Schedule</div>
+                    </div>
+                    <div className="modal-body">
+                        {tab === 'contract' && <ContractEditor employee={emp} ruleSets={ruleSets} onUpdate={load} />}
+                        {tab === 'schedule' && <ScheduleEditor employee={emp} onUpdate={load} />}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function ContractEditor({ employee, ruleSets, onUpdate }) {
+        const contract = employee.contract;
+        const [form, setForm] = useState(contract || {
+            employee_id: employee.id, contract_type: 'full_time', start_date: new Date().toISOString().split('T')[0],
+            end_date: '', total_weekly_hours: 37, base_hourly_wage: 150, monthly_salary: '',
+            salary_type: 'hourly', rule_set_id: ruleSets[0]?.id || 1, holiday_calendar: 'danish',
+            collective_agreement: '', breaks_paid: 'use_rule_set', default_break_duration: ''
+        });
+        const set = (f, v) => setForm(prev => ({...prev, [f]: v}));
+
+        const save = async () => {
+            if (contract?.id) {
+                await api(`/contracts/${contract.id}`, 'PUT', form);
+            } else {
+                await api('/contracts', 'POST', { ...form, employee_id: employee.id });
+            }
+            await onUpdate();
+        };
+
+        return (
+            <div>
+                <div className="form-grid">
+                    <div className="form-group">
+                        <label>Contract Type *</label>
+                        <select value={form.contract_type} onChange={e => set('contract_type', e.target.value)}>
+                            <option value="full_time">Full-time</option>
+                            <option value="part_time">Part-time</option>
+                            <option value="hourly">Hourly</option>
+                            <option value="zero_hours">Zero-hours (on-call)</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Salary Type *</label>
+                        <select value={form.salary_type} onChange={e => set('salary_type', e.target.value)}>
+                            <option value="hourly">Hourly</option>
+                            <option value="monthly">Monthly-salaried</option>
+                        </select>
+                    </div>
+                    <div className="form-group"><label>Start Date *</label><input type="date" value={form.start_date} onChange={e => set('start_date', e.target.value)} /></div>
+                    <div className="form-group"><label>End Date</label><input type="date" value={form.end_date || ''} onChange={e => set('end_date', e.target.value || null)} /></div>
+                    <div className="form-group"><label>Weekly Hours *</label><input type="number" step="0.5" value={form.total_weekly_hours} onChange={e => set('total_weekly_hours', parseFloat(e.target.value))} /></div>
+                    <div className="form-group"><label>Base Hourly Wage (DKK) *</label><input type="number" step="0.01" value={form.base_hourly_wage} onChange={e => set('base_hourly_wage', parseFloat(e.target.value))} /></div>
+                    {form.salary_type === 'monthly' && (
+                        <div className="form-group"><label>Monthly Salary (DKK)</label><input type="number" step="0.01" value={form.monthly_salary || ''} onChange={e => set('monthly_salary', parseFloat(e.target.value) || null)} /></div>
+                    )}
+                    <div className="form-group">
+                        <label>Wage Rule Set *</label>
+                        <select value={form.rule_set_id} onChange={e => set('rule_set_id', parseInt(e.target.value))}>
+                            {ruleSets.map(rs => <option key={rs.id} value={rs.id}>{rs.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Holiday Calendar</label>
+                        <select value={form.holiday_calendar} onChange={e => set('holiday_calendar', e.target.value)}>
+                            <option value="danish">Danish</option><option value="swedish">Swedish</option><option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div className="form-group"><label>Collective Agreement</label><input value={form.collective_agreement || ''} onChange={e => set('collective_agreement', e.target.value)} /></div>
+                    <div className="form-group">
+                        <label>Breaks Paid</label>
+                        <select value={form.breaks_paid} onChange={e => set('breaks_paid', e.target.value)}>
+                            <option value="use_rule_set">Use rule set default</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <div className="form-group"><label>Break Duration Override (min)</label><input type="number" value={form.default_break_duration || ''} onChange={e => set('default_break_duration', parseInt(e.target.value) || null)} placeholder="Use rule set default" /></div>
+                </div>
+                <button className="btn btn-primary" onClick={save}>{contract ? 'Update Contract' : 'Create Contract'}</button>
+            </div>
+        );
+    }
+
+    function ScheduleEditor({ employee, onUpdate }) {
+        const schedules = employee.schedules || [];
+        const [current, setCurrent] = useState(schedules[0] || null);
+        const [days, setDays] = useState(
+            current?.days?.length > 0 ? current.days : [1,2,3,4,5,6,7].map(d => ({
+                day_of_week: d, is_active: d <= 5 ? 1 : 0,
+                start_time: d <= 5 ? '08:00' : null,
+                end_time: d <= 5 ? '16:00' : null,
+                break_duration: null, block_number: 1
+            }))
+        );
+
+        const setDay = (dow, field, value) => {
+            setDays(prev => prev.map(d => d.day_of_week === dow ? {...d, [field]: value} : d));
+        };
+
+        const save = async () => {
+            const payload = {
+                employee_id: employee.id,
+                schedule_name: current?.schedule_name || 'Default',
+                rotation_order: current?.rotation_order || 1,
+                rotation_start_date: current?.rotation_start_date || null,
+                days
+            };
+            if (current?.id) {
+                await api(`/schedules/${current.id}`, 'PUT', payload);
+            } else {
+                await api('/schedules', 'POST', payload);
+            }
+            await onUpdate();
+        };
+
+        const totalHours = days.reduce((sum, d) => {
+            if (!d.is_active || !d.start_time || !d.end_time) return sum;
+            const [sh, sm] = d.start_time.split(':').map(Number);
+            const [eh, em] = d.end_time.split(':').map(Number);
+            let mins = (eh * 60 + em) - (sh * 60 + sm);
+            if (mins < 0) mins += 1440;
+            return sum + mins / 60;
+        }, 0);
+
+        return (
+            <div>
+                <div className="form-row" style={{marginBottom:'16px'}}>
+                    <div className="form-group"><label>Schedule Name</label><input value={current?.schedule_name || 'Default'} onChange={e => setCurrent(prev => ({...prev, schedule_name: e.target.value}))} /></div>
+                    <div className="form-group"><label>Rotation Order</label><input type="number" value={current?.rotation_order || 1} onChange={e => setCurrent(prev => ({...prev, rotation_order: parseInt(e.target.value)}))} /></div>
+                    <div className="form-group"><label>Rotation Start</label><input type="date" value={current?.rotation_start_date || ''} onChange={e => setCurrent(prev => ({...prev, rotation_start_date: e.target.value || null}))} /></div>
+                </div>
+
+                <div className="schedule-grid" style={{marginBottom:'16px'}}>
+                    <div className="schedule-cell schedule-header"></div>
+                    {[1,2,3,4,5,6,7].map(d => <div key={d} className="schedule-cell schedule-header">{DAYS_SHORT[d]}</div>)}
+                    <div className="schedule-cell schedule-header">Active</div>
+                    {days.map(d => (
+                        <div key={'a'+d.day_of_week} className={`schedule-cell ${d.is_active ? 'schedule-day-active' : ''}`} style={{textAlign:'center'}}>
+                            <label className="toggle">
+                                <input type="checkbox" checked={!!d.is_active} onChange={e => setDay(d.day_of_week, 'is_active', e.target.checked ? 1 : 0)} />
+                                <span className="toggle-slider"></span>
+                            </label>
+                        </div>
+                    ))}
+                    <div className="schedule-cell schedule-header">Start</div>
+                    {days.map(d => (
+                        <div key={'s'+d.day_of_week} className="schedule-cell">
+                            {d.is_active ? <input type="time" value={d.start_time || ''} onChange={e => setDay(d.day_of_week, 'start_time', e.target.value)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">OFF</div>}
+                        </div>
+                    ))}
+                    <div className="schedule-cell schedule-header">End</div>
+                    {days.map(d => (
+                        <div key={'e'+d.day_of_week} className="schedule-cell">
+                            {d.is_active ? <input type="time" value={d.end_time || ''} onChange={e => setDay(d.day_of_week, 'end_time', e.target.value)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">OFF</div>}
+                        </div>
+                    ))}
+                    <div className="schedule-cell schedule-header">Break</div>
+                    {days.map(d => (
+                        <div key={'b'+d.day_of_week} className="schedule-cell">
+                            {d.is_active ? <input type="number" placeholder="min" value={d.break_duration || ''} onChange={e => setDay(d.day_of_week, 'break_duration', parseInt(e.target.value) || null)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">OFF</div>}
+                        </div>
+                    ))}
+                </div>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                    <span style={{fontWeight:600}}>Total: {totalHours.toFixed(1)}h / week</span>
+                    <button className="btn btn-primary" onClick={save}>Save Schedule</button>
+                </div>
+            </div>
+        );
+    }
+
+    // ===== Time Entries =====
+    function TimeEntriesPage() {
+        const { employees } = useContext(AppContext);
+        const [entries, setEntries] = useState([]);
+        const [showForm, setShowForm] = useState(false);
+        const [selectedEntry, setSelectedEntry] = useState(null);
+        const [filters, setFilters] = useState({ employee_id: '', date_from: getMonday(), date_to: getSunday() });
+
+        function getMonday() {
+            const d = new Date(); const day = d.getDay() || 7;
+            d.setDate(d.getDate() - day + 1);
+            return d.toISOString().split('T')[0];
+        }
+        function getSunday() {
+            const d = new Date(); const day = d.getDay() || 7;
+            d.setDate(d.getDate() - day + 7);
+            return d.toISOString().split('T')[0];
+        }
+
+        const load = async () => {
+            let url = `/time-entries?date_from=${filters.date_from}&date_to=${filters.date_to}`;
+            if (filters.employee_id) url += `&employee_id=${filters.employee_id}`;
+            const data = await api(url);
+            setEntries(data);
+        };
+        useEffect(() => { load(); }, [filters]);
+
+        const saveEntry = async (data) => {
+            await api('/time-entries', 'POST', data);
+            await load();
+            setShowForm(false);
+        };
+
+        const deleteEntry = async (id) => {
+            if (confirm('Delete this time entry?')) {
+                await api(`/time-entries/${id}`, 'DELETE');
+                await load();
+            }
+        };
+
+        return (
+            <div>
+                <div className="page-header">
+                    <h2>Time Entries</h2>
+                    <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ New Entry</button>
+                </div>
+                <div className="page-body">
+                    <div className="card">
+                        <div className="card-body" style={{display:'flex', gap:'12px', alignItems:'end', flexWrap:'wrap'}}>
+                            <div className="form-group" style={{margin:0}}>
+                                <label>Employee</label>
+                                <select value={filters.employee_id} onChange={e => setFilters(f => ({...f, employee_id: e.target.value}))}>
+                                    <option value="">All employees</option>
+                                    {employees.map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group" style={{margin:0}}>
+                                <label>From</label>
+                                <input type="date" value={filters.date_from} onChange={e => setFilters(f => ({...f, date_from: e.target.value}))} />
+                            </div>
+                            <div className="form-group" style={{margin:0}}>
+                                <label>To</label>
+                                <input type="date" value={filters.date_to} onChange={e => setFilters(f => ({...f, date_to: e.target.value}))} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {entries.length === 0 ? (
+                        <div className="empty-state"><div className="empty-icon">🕐</div><p>No time entries in this period.</p></div>
+                    ) : (
+                        <div className="card">
+                            <div className="table-wrap">
+                                <table>
+                                    <thead><tr><th>Date</th><th>Employee</th><th>Clock In</th><th>Clock Out</th><th>Break</th><th>Net Hours</th><th></th></tr></thead>
+                                    <tbody>
+                                        {entries.map(e => {
+                                            const mins = ((new Date('2000-01-01T'+e.clock_out) - new Date('2000-01-01T'+e.clock_in)) / 60000);
+                                            const net = (mins > 0 ? mins : mins + 1440) / 60 - (e.break_minutes || 0) / 60;
+                                            return (
+                                                <tr key={e.id}>
+                                                    <td>{fmt.date(e.date)}</td>
+                                                    <td style={{fontWeight:500}}>{e.first_name} {e.last_name}</td>
+                                                    <td>{e.clock_in}</td>
+                                                    <td>{e.clock_out}</td>
+                                                    <td>{e.break_minutes || 0}min</td>
+                                                    <td>{net.toFixed(2)}h</td>
+                                                    <td>
+                                                        <div className="btn-group">
+                                                            <button className="btn btn-sm btn-primary" onClick={() => setSelectedEntry(e)}>Details</button>
+                                                            <button className="btn btn-sm btn-danger" onClick={() => deleteEntry(e.id)}>Delete</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                {showForm && <TimeEntryFormModal employees={employees} onSave={saveEntry} onClose={() => setShowForm(false)} />}
+                {selectedEntry && <TimeEntryDetailModal entryId={selectedEntry.id} onClose={() => setSelectedEntry(null)} />}
+            </div>
+        );
+    }
+
+    function TimeEntryFormModal({ employees, onSave, onClose }) {
+        const [form, setForm] = useState({
+            employee_id: employees[0]?.id || '', date: new Date().toISOString().split('T')[0],
+            clock_in: '08:00', clock_out: '16:00', break_minutes: 30, is_employer_cancelled: 0, notes: ''
+        });
+        const set = (f, v) => setForm(prev => ({...prev, [f]: v}));
+
+        return (
+            <div className="modal-overlay" onClick={onClose}>
+                <div className="modal" onClick={e => e.stopPropagation()}>
+                    <div className="modal-header"><h3>New Time Entry</h3><button className="modal-close" onClick={onClose}>&times;</button></div>
+                    <div className="modal-body">
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>Employee *</label>
+                                <select value={form.employee_id} onChange={e => set('employee_id', parseInt(e.target.value))}>
+                                    {employees.map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group"><label>Date *</label><input type="date" value={form.date} onChange={e => set('date', e.target.value)} /></div>
+                            <div className="form-group"><label>Clock In *</label><input type="time" value={form.clock_in} onChange={e => set('clock_in', e.target.value)} /></div>
+                            <div className="form-group"><label>Clock Out *</label><input type="time" value={form.clock_out} onChange={e => set('clock_out', e.target.value)} /></div>
+                            <div className="form-group"><label>Break (minutes)</label><input type="number" value={form.break_minutes} onChange={e => set('break_minutes', parseInt(e.target.value) || null)} /></div>
+                            <div className="form-group">
+                                <label>Employer Cancelled?</label>
+                                <label className="toggle" style={{display:'block', marginTop:'4px'}}>
+                                    <input type="checkbox" checked={!!form.is_employer_cancelled} onChange={e => set('is_employer_cancelled', e.target.checked ? 1 : 0)} />
+                                    <span className="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div className="form-group"><label>Notes</label><textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows="2" /></div>
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+                        <button className="btn btn-success" onClick={() => onSave(form)}>Save & Calculate</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    function TimeEntryDetailModal({ entryId, onClose }) {
+        const [entry, setEntry] = useState(null);
+        useEffect(() => { api(`/time-entries/${entryId}`).then(setEntry).catch(console.error); }, [entryId]);
+
+        if (!entry) return null;
+        const wageLines = entry.wage_lines || [];
+        const total = wageLines.reduce((s, l) => s + parseFloat(l.amount), 0);
+
+        return (
+            <div className="modal-overlay" onClick={onClose}>
+                <div className="modal" style={{maxWidth:'700px'}} onClick={e => e.stopPropagation()}>
+                    <div className="modal-header"><h3>Wage Breakdown — {fmt.date(entry.date)}</h3><button className="modal-close" onClick={onClose}>&times;</button></div>
+                    <div className="modal-body">
+                        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', marginBottom:'20px'}}>
+                            <div><small style={{color:'var(--gray-500)'}}>Employee</small><div style={{fontWeight:600}}>{entry.first_name} {entry.last_name}</div></div>
+                            <div><small style={{color:'var(--gray-500)'}}>Shift</small><div style={{fontWeight:600}}>{entry.clock_in} — {entry.clock_out}</div></div>
+                            <div><small style={{color:'var(--gray-500)'}}>Break</small><div style={{fontWeight:600}}>{entry.break_minutes || 0} min</div></div>
+                        </div>
+                        <div className="wage-breakdown">
+                            <div className="wb-header">Wage Lines</div>
+                            {wageLines.map((line, i) => (
+                                <div key={i} className="wage-line">
+                                    <span className="wage-code" style={{color: WAGE_CODE_COLORS[line.wage_code]}}>{line.wage_code}</span>
+                                    <span className="wage-desc">
+                                        {line.wage_type}
+                                        {line.supplement_pct > 0 && <span style={{color:'var(--gray-400)', marginLeft:'6px'}}>+{line.supplement_pct}%</span>}
+                                    </span>
+                                    <span className="wage-hours">{fmt.hours(line.hours)}</span>
+                                    <span className="wage-amount">{fmt.currency(line.amount)}</span>
+                                </div>
+                            ))}
+                            <div className="wage-line wage-total">
+                                <span className="wage-code"></span>
+                                <span className="wage-desc">Total</span>
+                                <span className="wage-hours"></span>
+                                <span className="wage-amount" style={{color:'var(--primary)'}}>{fmt.currency(total)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ===== Payroll Page =====
+    function PayrollPage() {
+        const { employees } = useContext(AppContext);
+        const [lines, setLines] = useState([]);
+        const [filters, setFilters] = useState({ employee_id: '', date_from: getFirstOfMonth(), date_to: new Date().toISOString().split('T')[0] });
+
+        function getFirstOfMonth() {
+            const d = new Date(); d.setDate(1);
+            return d.toISOString().split('T')[0];
+        }
+
+        const load = async () => {
+            let url = `/wage-lines?date_from=${filters.date_from}&date_to=${filters.date_to}`;
+            if (filters.employee_id) url += `&employee_id=${filters.employee_id}`;
+            setLines(await api(url));
+        };
+        useEffect(() => { load(); }, [filters]);
+
+        // Group by employee
+        const byEmployee = {};
+        lines.forEach(l => {
+            const key = l.employee_id;
+            if (!byEmployee[key]) byEmployee[key] = { name: `${l.first_name} ${l.last_name}`, lines: [], total: 0 };
+            byEmployee[key].lines.push(l);
+            byEmployee[key].total += parseFloat(l.amount);
+        });
+
+        const grandTotal = lines.reduce((s, l) => s + parseFloat(l.amount), 0);
+
+        return (
+            <div>
+                <div className="page-header"><h2>Payroll Results</h2></div>
+                <div className="page-body">
+                    <div className="card">
+                        <div className="card-body" style={{display:'flex', gap:'12px', alignItems:'end', flexWrap:'wrap'}}>
+                            <div className="form-group" style={{margin:0}}>
+                                <label>Employee</label>
+                                <select value={filters.employee_id} onChange={e => setFilters(f => ({...f, employee_id: e.target.value}))}>
+                                    <option value="">All</option>
+                                    {employees.map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group" style={{margin:0}}><label>From</label><input type="date" value={filters.date_from} onChange={e => setFilters(f => ({...f, date_from: e.target.value}))} /></div>
+                            <div className="form-group" style={{margin:0}}><label>To</label><input type="date" value={filters.date_to} onChange={e => setFilters(f => ({...f, date_to: e.target.value}))} /></div>
+                            <div style={{fontWeight:700, fontSize:'18px', marginLeft:'auto'}}>Grand Total: {fmt.currency(grandTotal)}</div>
+                        </div>
+                    </div>
+
+                    {Object.entries(byEmployee).map(([empId, data]) => (
+                        <div key={empId} className="card">
+                            <div className="card-header">
+                                <h3>{data.name}</h3>
+                                <span style={{fontWeight:700, fontSize:'16px', color:'var(--primary)'}}>{fmt.currency(data.total)}</span>
+                            </div>
+                            <div className="card-body" style={{padding:0}}>
+                                <table>
+                                    <thead><tr><th>Date</th><th>Code</th><th>Type</th><th>Hours</th><th>Base Rate</th><th>Supplement</th><th>Amount</th></tr></thead>
+                                    <tbody>
+                                        {data.lines.map((l, i) => (
+                                            <tr key={i}>
+                                                <td>{fmt.date(l.date)}</td>
+                                                <td><span style={{fontFamily:'monospace', fontWeight:700, color:WAGE_CODE_COLORS[l.wage_code]}}>{l.wage_code}</span></td>
+                                                <td>{l.wage_type}</td>
+                                                <td>{fmt.hours(l.hours)}</td>
+                                                <td>{fmt.currency(l.base_rate)}</td>
+                                                <td>{l.supplement_pct > 0 ? `+${l.supplement_pct}%` : '-'}</td>
+                                                <td style={{fontWeight:600}}>{fmt.currency(l.amount)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ))}
+                    {lines.length === 0 && <div className="empty-state"><div className="empty-icon">💰</div><p>No wage lines found for this period.</p></div>}
+                </div>
+            </div>
+        );
+    }
+
+    // ===== Simulator =====
+    function SimulatorPage() {
+        const { employees } = useContext(AppContext);
+        const [form, setForm] = useState({
+            employee_id: employees[0]?.id || '', date: new Date().toISOString().split('T')[0],
+            clock_in: '08:00', clock_out: '16:00', break_minutes: 30, is_employer_cancelled: 0
+        });
+        const [result, setResult] = useState(null);
+        const [error, setError] = useState('');
+        const set = (f, v) => setForm(prev => ({...prev, [f]: v}));
+
+        const simulate = async () => {
+            setError('');
+            try {
+                const res = await api('/calculate/simulate', 'POST', form);
+                setResult(res);
+            } catch (e) { setError(e.message); }
+        };
+
+        return (
+            <div>
+                <div className="page-header"><h2>Wage Simulator</h2></div>
+                <div className="page-body">
+                    <div className="alert alert-info">
+                        Test wage calculations without saving. Enter shift details to see the full breakdown.
+                    </div>
+                    <div className="card">
+                        <div className="card-header"><h3>Shift Parameters</h3></div>
+                        <div className="card-body">
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label>Employee</label>
+                                    <select value={form.employee_id} onChange={e => set('employee_id', parseInt(e.target.value))}>
+                                        <option value="">Select employee</option>
+                                        {employees.map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group"><label>Date</label><input type="date" value={form.date} onChange={e => set('date', e.target.value)} /></div>
+                                <div className="form-group"><label>Clock In</label><input type="time" value={form.clock_in} onChange={e => set('clock_in', e.target.value)} /></div>
+                                <div className="form-group"><label>Clock Out</label><input type="time" value={form.clock_out} onChange={e => set('clock_out', e.target.value)} /></div>
+                                <div className="form-group"><label>Break (min)</label><input type="number" value={form.break_minutes} onChange={e => set('break_minutes', parseInt(e.target.value) || 0)} /></div>
+                                <div className="form-group">
+                                    <label>Employer Cancelled</label>
+                                    <label className="toggle" style={{display:'block', marginTop:'4px'}}>
+                                        <input type="checkbox" checked={!!form.is_employer_cancelled} onChange={e => set('is_employer_cancelled', e.target.checked ? 1 : 0)} />
+                                        <span className="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <button className="btn btn-success" onClick={simulate} style={{marginTop:'8px'}}>Calculate Wages</button>
+                        </div>
+                    </div>
+
+                    {error && <div className="alert alert-danger">{error}</div>}
+
+                    {result && (
+                        <div className="card">
+                            <div className="card-header"><h3>Calculation Result</h3></div>
+                            <div className="card-body">
+                                <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(150px, 1fr))', gap:'12px', marginBottom:'20px'}}>
+                                    <div className="stat-card" style={{padding:'12px'}}>
+                                        <div className="stat-label">Day Type</div>
+                                        <div style={{fontWeight:600, fontSize:'14px'}}>{result.day_type?.day_name}</div>
+                                        <div style={{fontSize:'12px', color:'var(--gray-400)'}}>
+                                            {result.day_type?.is_holiday && '🎄 Holiday '}
+                                            {result.day_type?.is_weekend && '📅 Weekend '}
+                                            {result.day_type?.is_non_contracted && '⚠️ Non-contracted'}
+                                            {result.day_type?.is_scheduled && '✓ Scheduled'}
+                                        </div>
+                                    </div>
+                                    <div className="stat-card" style={{padding:'12px'}}>
+                                        <div className="stat-label">Gross Worked</div>
+                                        <div style={{fontWeight:600, fontSize:'14px'}}>{(result.gross_worked_minutes / 60).toFixed(2)}h</div>
+                                    </div>
+                                    <div className="stat-card" style={{padding:'12px'}}>
+                                        <div className="stat-label">Break</div>
+                                        <div style={{fontWeight:600, fontSize:'14px'}}>{result.break_minutes}min {result.break_is_paid ? '(paid)' : '(unpaid)'}</div>
+                                    </div>
+                                    <div className="stat-card" style={{padding:'12px'}}>
+                                        <div className="stat-label">Normal Hours</div>
+                                        <div style={{fontWeight:600, fontSize:'14px', color:'var(--primary)'}}>{fmt.hours(result.normal_hours)}</div>
+                                    </div>
+                                    <div className="stat-card" style={{padding:'12px'}}>
+                                        <div className="stat-label">Overtime</div>
+                                        <div style={{fontWeight:600, fontSize:'14px', color: result.overtime_hours > 0 ? 'var(--warning)' : 'var(--gray-400)'}}>{fmt.hours(result.overtime_hours)}</div>
+                                    </div>
+                                    <div className="stat-card" style={{padding:'12px', background:'var(--primary-light)'}}>
+                                        <div className="stat-label">Total Pay</div>
+                                        <div style={{fontWeight:700, fontSize:'18px', color:'var(--primary)'}}>{fmt.currency(result.total_amount)}</div>
+                                    </div>
+                                </div>
+
+                                <div className="wage-breakdown">
+                                    <div className="wb-header">Wage Lines Breakdown</div>
+                                    {result.wage_lines?.map((line, i) => (
+                                        <div key={i} className="wage-line">
+                                            <span className="wage-code" style={{color: WAGE_CODE_COLORS[line.wage_code]}}>{line.wage_code}</span>
+                                            <span className="wage-desc">
+                                                {line.wage_type}
+                                                {line.notes && <span style={{color:'var(--gray-400)', fontSize:'11px', marginLeft:'8px'}}>({line.notes})</span>}
+                                            </span>
+                                            <span className="wage-hours">{fmt.hours(line.hours)}</span>
+                                            <span style={{width:'80px', textAlign:'right', fontSize:'12px', color:'var(--gray-400)'}}>
+                                                {line.supplement_pct > 0 ? `+${line.supplement_pct}%` : '1.0x'}
+                                            </span>
+                                            <span className="wage-amount">{fmt.currency(line.amount)}</span>
+                                        </div>
+                                    ))}
+                                    <div className="wage-line wage-total">
+                                        <span className="wage-code"></span>
+                                        <span className="wage-desc">Total</span>
+                                        <span className="wage-hours">{fmt.hours(result.net_worked_hours)}</span>
+                                        <span style={{width:'80px'}}></span>
+                                        <span className="wage-amount" style={{color:'var(--primary)', fontSize:'16px'}}>{fmt.currency(result.total_amount)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // ===== Holidays =====
+    function HolidaysPage() {
+        const [holidays, setHolidays] = useState([]);
+        const [newH, setNewH] = useState({ date: '', name: '', calendar_name: 'danish' });
+
+        const load = async () => { setHolidays(await api('/holidays?calendar=danish')); };
+        useEffect(() => { load(); }, []);
+
+        const add = async () => {
+            if (!newH.date || !newH.name) return;
+            await api('/holidays', 'POST', newH);
+            setNewH({ date: '', name: '', calendar_name: 'danish' });
+            await load();
+        };
+        const remove = async (id) => { await api(`/holidays/${id}`, 'DELETE'); await load(); };
+
+        return (
+            <div>
+                <div className="page-header"><h2>Holiday Calendar</h2></div>
+                <div className="page-body">
+                    <div className="card">
+                        <div className="card-header"><h3>Add Holiday</h3></div>
+                        <div className="card-body">
+                            <div style={{display:'flex', gap:'12px', alignItems:'end'}}>
+                                <div className="form-group" style={{margin:0}}><label>Date</label><input type="date" value={newH.date} onChange={e => setNewH(h => ({...h, date: e.target.value}))} /></div>
+                                <div className="form-group" style={{margin:0, flex:1}}><label>Name</label><input value={newH.name} onChange={e => setNewH(h => ({...h, name: e.target.value}))} placeholder="e.g. Grundlovsdag" /></div>
+                                <button className="btn btn-primary" onClick={add}>Add</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="card">
+                        <div className="card-header"><h3>Danish Holidays (2026)</h3></div>
+                        <div className="card-body" style={{padding:0}}>
+                            <table>
+                                <thead><tr><th>Date</th><th>Name</th><th></th></tr></thead>
+                                <tbody>
+                                    {holidays.map(h => (
+                                        <tr key={h.id}><td>{fmt.date(h.date)}</td><td>{h.name}</td>
+                                        <td><button className="btn btn-sm btn-danger" onClick={() => remove(h.id)}>Remove</button></td></tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ===== Warnings =====
+    function WarningsPage() {
+        const { warnings, loadData } = useContext(AppContext);
+
+        const resolve = async (id) => {
+            await api(`/warnings/${id}`, 'PUT');
+            await loadData();
+        };
+
+        return (
+            <div>
+                <div className="page-header"><h2>Warnings & Alerts</h2></div>
+                <div className="page-body">
+                    {warnings.length === 0 ? (
+                        <div className="empty-state"><div className="empty-icon">✅</div><p>No unresolved warnings.</p></div>
+                    ) : (
+                        <div className="card">
+                            <div className="card-body" style={{padding:0}}>
+                                <table>
+                                    <thead><tr><th>Date</th><th>Employee</th><th>Type</th><th>Message</th><th></th></tr></thead>
+                                    <tbody>
+                                        {warnings.map(w => (
+                                            <tr key={w.id}>
+                                                <td>{fmt.date(w.date)}</td>
+                                                <td>{w.first_name} {w.last_name}</td>
+                                                <td><span className="badge badge-yellow">{w.warning_type}</span></td>
+                                                <td>{w.message}</td>
+                                                <td><button className="btn btn-sm btn-success" onClick={() => resolve(w.id)}>Resolve</button></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // ===== Mount =====
+    ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "payroll",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["-S", "localhost:8080", "router.php"],
+      "cwd": "payroll/backend",
+      "port": 8080
+    }
+  ]
+}
