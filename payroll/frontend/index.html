@@ -7,6 +7,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary: #2563eb;
@@ -247,6 +250,278 @@
         pct: (v) => (v || 0).toFixed(0) + '%',
         date: (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '-',
     };
+
+    // ===== Export Utilities =====
+    const fmtPlain = {
+        currency: (v) => (v || 0).toFixed(2),
+        hours: (v) => {
+            const total = Math.abs(v || 0);
+            const h = Math.floor(total);
+            const m = Math.round((total - h) * 60);
+            const sign = (v || 0) < 0 ? '-' : '';
+            if (h === 0 && m === 0) return '0 min';
+            if (h === 0) return sign + m + ' min';
+            if (m === 0) return sign + h + (h === 1 ? ' hour' : ' hours');
+            return sign + h + (h === 1 ? ' hour ' : ' hours ') + m + ' min';
+        },
+        date: (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('da-DK', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
+    };
+
+    function groupLinesForExport(lines) {
+        const byEmployee = {};
+        lines.forEach(l => {
+            const key = l.employee_id;
+            if (!byEmployee[key]) byEmployee[key] = { name: `${l.first_name} ${l.last_name}`, lines: [], total: 0 };
+            byEmployee[key].lines.push(l);
+            byEmployee[key].total += parseFloat(l.amount);
+        });
+        const grandTotal = lines.reduce((s, l) => s + parseFloat(l.amount), 0);
+        return { byEmployee, grandTotal };
+    }
+
+    function exportPayrollPDF(lines, dateFrom, dateTo, singleEmployee) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('landscape', 'mm', 'a4');
+        const pageW = doc.internal.pageSize.getWidth();
+        const { byEmployee, grandTotal } = groupLinesForExport(lines);
+        const entries = Object.entries(byEmployee);
+        const periodStr = `${fmtPlain.date(dateFrom)} - ${fmtPlain.date(dateTo)}`;
+
+        const drawHeader = (doc, y) => {
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(37, 99, 235);
+            doc.text('Fogito HR', 14, y);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(107, 114, 128);
+            doc.text('PAYROLL SYSTEM', 14, y + 5);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(31, 41, 55);
+            doc.text('Payroll Report', pageW / 2, y, { align: 'center' });
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(107, 114, 128);
+            doc.text(`Period: ${periodStr}`, pageW / 2, y + 6, { align: 'center' });
+            doc.setFontSize(8);
+            doc.text(`Generated: ${new Date().toLocaleString('da-DK')}`, pageW - 14, y, { align: 'right' });
+            doc.setDrawColor(229, 231, 235);
+            doc.line(14, y + 10, pageW - 14, y + 10);
+            return y + 16;
+        };
+
+        let startY = drawHeader(doc, 14);
+
+        // Wage code color map for badges in PDF
+        const codeColors = {
+            W01: [37,99,235], W02: [217,119,6], W03: [220,38,38], W04: [124,58,237],
+            W05: [109,40,217], W06: [8,145,178], W07: [13,148,136], W08: [190,24,93],
+            W09: [234,88,12], W10: [101,163,13], W11: [71,85,105]
+        };
+
+        entries.forEach(([empId, data], idx) => {
+            if (idx > 0) { doc.addPage(); startY = drawHeader(doc, 14); }
+
+            // Employee header
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(31, 41, 55);
+            doc.text(data.name, 14, startY);
+            doc.setTextColor(37, 99, 235);
+            doc.text(`Total: ${Number(data.total).toLocaleString('da-DK', {minimumFractionDigits:2})} DKK`, pageW - 14, startY, { align: 'right' });
+            startY += 4;
+
+            // Wage lines table
+            const tableData = data.lines.map(l => [
+                fmtPlain.date(l.date),
+                l.wage_code,
+                l.wage_type,
+                fmtPlain.hours(l.hours),
+                Number(l.base_rate).toLocaleString('da-DK', {minimumFractionDigits:2}),
+                l.supplement_pct > 0 ? `+${l.supplement_pct}%` : '-',
+                Number(l.amount).toLocaleString('da-DK', {minimumFractionDigits:2})
+            ]);
+
+            doc.autoTable({
+                startY,
+                head: [['Date', 'Code', 'Type', 'Hours', 'Base Rate (DKK)', 'Supplement', 'Amount (DKK)']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+                bodyStyles: { fontSize: 8, textColor: [31, 41, 55] },
+                columnStyles: {
+                    0: { cellWidth: 35 },
+                    1: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+                    3: { cellWidth: 28 },
+                    4: { halign: 'right' },
+                    5: { halign: 'center', cellWidth: 22 },
+                    6: { halign: 'right', fontStyle: 'bold' }
+                },
+                margin: { left: 14, right: 14 },
+                didParseCell: (data) => {
+                    // Color the wage code cell
+                    if (data.section === 'body' && data.column.index === 1) {
+                        const code = data.cell.raw;
+                        if (codeColors[code]) {
+                            data.cell.styles.textColor = codeColors[code];
+                        }
+                    }
+                },
+                didDrawPage: () => {
+                    // Footer
+                    doc.setFontSize(7);
+                    doc.setTextColor(156, 163, 175);
+                    doc.text(`Fogito HR Payroll System`, 14, doc.internal.pageSize.getHeight() - 8);
+                    doc.text(`Page ${doc.internal.getNumberOfPages()}`, pageW - 14, doc.internal.pageSize.getHeight() - 8, { align: 'right' });
+                }
+            });
+
+            // Wage code summary for this employee
+            const summary = {};
+            data.lines.forEach(l => {
+                if (!summary[l.wage_code]) summary[l.wage_code] = { type: l.wage_type, hours: 0, amount: 0 };
+                summary[l.wage_code].hours += parseFloat(l.hours);
+                summary[l.wage_code].amount += parseFloat(l.amount);
+            });
+            const summaryY = doc.lastAutoTable.finalY + 4;
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(107, 114, 128);
+            doc.text('Wage Code Summary', 14, summaryY);
+
+            doc.autoTable({
+                startY: summaryY + 2,
+                head: [['Code', 'Type', 'Total Hours', 'Total Amount (DKK)']],
+                body: Object.entries(summary).sort(([a],[b]) => a.localeCompare(b)).map(([code, s]) => [
+                    code, s.type, fmtPlain.hours(s.hours), Number(s.amount).toLocaleString('da-DK', {minimumFractionDigits:2})
+                ]),
+                theme: 'grid',
+                headStyles: { fillColor: [243, 244, 246], textColor: [55, 65, 81], fontStyle: 'bold', fontSize: 8 },
+                bodyStyles: { fontSize: 8, textColor: [31, 41, 55] },
+                columnStyles: {
+                    0: { cellWidth: 16, fontStyle: 'bold', halign: 'center' },
+                    2: { cellWidth: 30 },
+                    3: { halign: 'right', fontStyle: 'bold' }
+                },
+                margin: { left: 14, right: 14 },
+                tableWidth: 140,
+                didParseCell: (data) => {
+                    if (data.section === 'body' && data.column.index === 0) {
+                        const code = data.cell.raw;
+                        if (codeColors[code]) data.cell.styles.textColor = codeColors[code];
+                    }
+                }
+            });
+
+            startY = doc.lastAutoTable.finalY + 10;
+        });
+
+        // Grand total on last page
+        if (!singleEmployee && entries.length > 1) {
+            const y = doc.lastAutoTable.finalY + 12;
+            doc.setFontSize(13);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(37, 99, 235);
+            doc.text(`Grand Total: ${Number(grandTotal).toLocaleString('da-DK', {minimumFractionDigits:2})} DKK`, pageW - 14, y, { align: 'right' });
+        }
+
+        const empSuffix = singleEmployee ? `_${entries[0]?.[1]?.name?.replace(/\s+/g,'_')}` : '';
+        doc.save(`Payroll_Report_${dateFrom}_${dateTo}${empSuffix}.pdf`);
+    }
+
+    function exportPayrollExcel(lines, dateFrom, dateTo, singleEmployee) {
+        const { byEmployee, grandTotal } = groupLinesForExport(lines);
+        const entries = Object.entries(byEmployee);
+        const wb = XLSX.utils.book_new();
+
+        // Summary sheet (only for multi-employee)
+        if (!singleEmployee && entries.length > 1) {
+            const summaryData = [
+                ['Fogito HR - Payroll Report'],
+                [`Period: ${fmtPlain.date(dateFrom)} - ${fmtPlain.date(dateTo)}`],
+                [`Generated: ${new Date().toLocaleString('da-DK')}`],
+                [],
+                ['Employee', 'Total Hours', 'Total Amount (DKK)']
+            ];
+            let allHours = 0;
+            entries.forEach(([empId, data]) => {
+                const totalHours = data.lines.reduce((s, l) => s + parseFloat(l.hours), 0);
+                allHours += totalHours;
+                summaryData.push([data.name, totalHours, data.total]);
+            });
+            summaryData.push([]);
+            summaryData.push(['Grand Total', allHours, grandTotal]);
+
+            // Wage code breakdown
+            summaryData.push([], ['Wage Code Breakdown']);
+            summaryData.push(['Code', 'Type', 'Total Hours', 'Total Amount (DKK)']);
+            const allCodes = {};
+            lines.forEach(l => {
+                if (!allCodes[l.wage_code]) allCodes[l.wage_code] = { type: l.wage_type, hours: 0, amount: 0 };
+                allCodes[l.wage_code].hours += parseFloat(l.hours);
+                allCodes[l.wage_code].amount += parseFloat(l.amount);
+            });
+            Object.entries(allCodes).sort(([a],[b]) => a.localeCompare(b)).forEach(([code, s]) => {
+                summaryData.push([code, s.type, s.hours, s.amount]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(summaryData);
+            // Column widths
+            ws['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+        }
+
+        // Per-employee sheets
+        entries.forEach(([empId, data]) => {
+            const sheetData = [
+                ['Fogito HR - Payroll Report'],
+                [`Employee: ${data.name}`],
+                [`Period: ${fmtPlain.date(dateFrom)} - ${fmtPlain.date(dateTo)}`],
+                [],
+                ['Date', 'Code', 'Type', 'Hours', 'Base Rate (DKK)', 'Supplement %', 'Amount (DKK)']
+            ];
+
+            data.lines.forEach(l => {
+                sheetData.push([
+                    l.date,
+                    l.wage_code,
+                    l.wage_type,
+                    parseFloat(l.hours),
+                    parseFloat(l.base_rate),
+                    l.supplement_pct > 0 ? parseFloat(l.supplement_pct) : 0,
+                    parseFloat(l.amount)
+                ]);
+            });
+
+            sheetData.push([]);
+            sheetData.push(['', '', '', '', '', 'Total:', data.total]);
+
+            // Wage code summary
+            sheetData.push([], ['Wage Code Summary']);
+            sheetData.push(['Code', 'Type', 'Total Hours', 'Total Amount (DKK)']);
+            const summary = {};
+            data.lines.forEach(l => {
+                if (!summary[l.wage_code]) summary[l.wage_code] = { type: l.wage_type, hours: 0, amount: 0 };
+                summary[l.wage_code].hours += parseFloat(l.hours);
+                summary[l.wage_code].amount += parseFloat(l.amount);
+            });
+            Object.entries(summary).sort(([a],[b]) => a.localeCompare(b)).forEach(([code, s]) => {
+                sheetData.push([code, s.type, s.hours, s.amount]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            ws['!cols'] = [
+                { wch: 12 }, { wch: 8 }, { wch: 28 }, { wch: 14 },
+                { wch: 16 }, { wch: 14 }, { wch: 16 }
+            ];
+            const sheetName = data.name.substring(0, 31); // Excel sheet name limit
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        });
+
+        const empSuffix = singleEmployee ? `_${entries[0]?.[1]?.name?.replace(/\s+/g,'_')}` : '';
+        XLSX.writeFile(wb, `Payroll_Report_${dateFrom}_${dateTo}${empSuffix}.xlsx`);
+    }
 
     const DAYS = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const DAYS_SHORT = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -1714,14 +1989,30 @@
                             </div>
                             <div className="form-group" style={{margin:0}}><label>From</label><input type="date" value={filters.date_from} onChange={e => setFilters(f => ({...f, date_from: e.target.value}))} /></div>
                             <div className="form-group" style={{margin:0}}><label>To</label><input type="date" value={filters.date_to} onChange={e => setFilters(f => ({...f, date_to: e.target.value}))} /></div>
-                            <div style={{fontWeight:700, fontSize:'18px', marginLeft:'auto'}}>Grand Total: {fmt.currency(grandTotal)}</div>
+                            <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'12px'}}>
+                                <div style={{fontWeight:700, fontSize:'18px'}}>Grand Total: {fmt.currency(grandTotal)}</div>
+                                {lines.length > 0 && (
+                                    <div className="btn-group">
+                                        <button className="btn btn-sm btn-outline" onClick={() => exportPayrollPDF(lines, filters.date_from, filters.date_to, !!filters.employee_id)} title="Export as PDF">PDF</button>
+                                        <button className="btn btn-sm btn-outline" onClick={() => exportPayrollExcel(lines, filters.date_from, filters.date_to, !!filters.employee_id)} title="Export as Excel">Excel</button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
                     {Object.entries(byEmployee).map(([empId, data]) => (
                         <div key={empId} className="card">
                             <div className="card-header">
-                                <h3>{data.name}</h3>
+                                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                                    <h3>{data.name}</h3>
+                                    <div className="btn-group">
+                                        <button className="btn btn-sm btn-outline" style={{padding:'2px 8px', fontSize:'11px'}}
+                                            onClick={() => exportPayrollPDF(data.lines.map(l => ({...l})), filters.date_from, filters.date_to, true)} title="Export this employee as PDF">PDF</button>
+                                        <button className="btn btn-sm btn-outline" style={{padding:'2px 8px', fontSize:'11px'}}
+                                            onClick={() => exportPayrollExcel(data.lines.map(l => ({...l})), filters.date_from, filters.date_to, true)} title="Export this employee as Excel">Excel</button>
+                                    </div>
+                                </div>
                                 <span style={{fontWeight:700, fontSize:'16px', color:'var(--primary)'}}>{fmt.currency(data.total)}</span>
                             </div>
                             <div className="card-body" style={{padding:0}}>
