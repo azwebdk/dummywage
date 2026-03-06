@@ -162,7 +162,7 @@
         .wage-code-legend-code { font-family: monospace; font-weight: 700; font-size: 11px; color: var(--gray-600); }
         .wage-code-legend-label { color: var(--gray-500); }
         .wage-desc { flex: 1; font-size: 13px; }
-        .wage-hours { width: 80px; text-align: right; font-size: 13px; color: var(--gray-500); }
+        .wage-hours { min-width: 100px; text-align: right; font-size: 13px; color: var(--gray-500); white-space: nowrap; }
         .wage-amount { width: 100px; text-align: right; font-weight: 600; font-size: 14px; }
         .wage-total { background: var(--gray-50); font-weight: 700; font-size: 15px; border-top: 2px solid var(--gray-200); }
 
@@ -196,12 +196,11 @@
 
         /* Info Tooltips */
         .info-tip { position: relative; display: inline-flex; align-items: center; margin-left: 5px; vertical-align: middle; }
-        .info-tip-icon { width: 15px; height: 15px; border-radius: 50%; background: var(--gray-200); color: var(--gray-500); font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: help; font-style: italic; line-height: 1; transition: all 0.15s; flex-shrink: 0; }
+        .info-tip-icon { width: 15px; height: 15px; border-radius: 50%; background: var(--gray-200); color: var(--gray-500); font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-style: italic; line-height: 1; transition: all 0.15s; flex-shrink: 0; user-select: none; }
         .info-tip-icon:hover { background: var(--primary-light); color: var(--primary); }
-        .info-tip-text { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--gray-900); color: var(--gray-100); padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 400; font-style: normal; white-space: normal; width: 280px; line-height: 1.55; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.2); pointer-events: none; letter-spacing: 0; text-transform: none; }
-        .info-tip-text::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--gray-900); }
-        .info-tip:hover .info-tip-text { display: block; }
-        .info-tip-text strong { color: white; }
+        .info-tip-icon.active { background: var(--primary); color: white; }
+        .info-tip-popup { position: fixed; background: var(--gray-900); color: var(--gray-100); padding: 12px 16px; border-radius: 8px; font-size: 12px; font-weight: 400; font-style: normal; white-space: normal; width: 300px; max-width: calc(100vw - 32px); line-height: 1.55; z-index: 10000; box-shadow: 0 8px 24px rgba(0,0,0,0.25); letter-spacing: 0; text-transform: none; }
+        .info-tip-popup strong { color: white; }
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -217,7 +216,7 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
-    const { useState, useEffect, useCallback, useMemo, createContext, useContext } = React;
+    const { useState, useEffect, useCallback, useMemo, createContext, useContext, useRef } = React;
 
     // ===== API Helper =====
     const API_BASE = '/api';
@@ -235,7 +234,16 @@
     // ===== Formatters =====
     const fmt = {
         currency: (v) => new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK', minimumFractionDigits: 2 }).format(v || 0),
-        hours: (v) => (v || 0).toFixed(2) + 'h',
+        hours: (v) => {
+            const total = Math.abs(v || 0);
+            const h = Math.floor(total);
+            const m = Math.round((total - h) * 60);
+            const sign = (v || 0) < 0 ? '-' : '';
+            if (h === 0 && m === 0) return '0 min';
+            if (h === 0) return sign + m + ' min';
+            if (m === 0) return sign + h + (h === 1 ? ' hour' : ' hours');
+            return sign + h + (h === 1 ? ' hour ' : ' hours ') + m + ' min';
+        },
         pct: (v) => (v || 0).toFixed(0) + '%',
         date: (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '-',
     };
@@ -276,10 +284,51 @@
 
     // ===== Info Tooltip Component =====
     function InfoTip({ text }) {
+        const [open, setOpen] = useState(false);
+        const [pos, setPos] = useState({ top: 0, left: 0 });
+        const iconRef = useRef(null);
+        const popupRef = useRef(null);
+
+        const openPopup = useCallback((e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            if (open) { setOpen(false); return; }
+            const rect = iconRef.current.getBoundingClientRect();
+            const popupW = 300;
+            const popupH = 200;
+            let top = rect.top - popupH - 8;
+            let left = rect.left + rect.width / 2 - popupW / 2;
+            if (top < 8) top = rect.bottom + 8;
+            if (left < 8) left = 8;
+            if (left + popupW > window.innerWidth - 8) left = window.innerWidth - popupW - 8;
+            setPos({ top, left });
+            setOpen(true);
+        }, [open]);
+
+        useEffect(() => {
+            if (!open || !popupRef.current || !iconRef.current) return;
+            const rect = iconRef.current.getBoundingClientRect();
+            const popup = popupRef.current.getBoundingClientRect();
+            let top = rect.top - popup.height - 8;
+            let left = rect.left + rect.width / 2 - popup.width / 2;
+            if (top < 8) top = rect.bottom + 8;
+            if (left < 8) left = 8;
+            if (left + popup.width > window.innerWidth - 8) left = window.innerWidth - popup.width - 8;
+            setPos({ top, left });
+        }, [open]);
+
         return (
             <span className="info-tip">
-                <span className="info-tip-icon">i</span>
-                <span className="info-tip-text">{text}</span>
+                <span ref={iconRef} className={`info-tip-icon${open ? ' active' : ''}`} onClick={openPopup}>i</span>
+                {open && ReactDOM.createPortal(
+                    <React.Fragment>
+                        <div style={{ position:'fixed', inset:0, zIndex:9999 }} onClick={() => setOpen(false)} />
+                        <div ref={popupRef} className="info-tip-popup" style={{ top: pos.top + 'px', left: pos.left + 'px' }}>
+                            {text}
+                        </div>
+                    </React.Fragment>,
+                    document.body
+                )}
             </span>
         );
     }
@@ -931,7 +980,7 @@
                                                 <td style={{fontWeight:500}}>{emp.first_name} {emp.last_name}</td>
                                                 <td>{emp.employee_number || '-'}</td>
                                                 <td><span className={`badge ${emp.contract_type ? 'badge-green' : 'badge-gray'}`}>{emp.contract_type ? emp.contract_type.replace('_', ' ') : 'No contract'}</span></td>
-                                                <td>{emp.total_weekly_hours ? `${emp.total_weekly_hours}h` : '-'}</td>
+                                                <td>{emp.total_weekly_hours ? fmt.hours(emp.total_weekly_hours) : '-'}</td>
                                                 <td>{emp.base_hourly_wage ? fmt.currency(emp.base_hourly_wage) : '-'}</td>
                                                 <td>{emp.rule_set_name || <span style={{color:'var(--gray-400)'}}>Not assigned</span>}</td>
                                                 <td>
@@ -1271,7 +1320,7 @@
                     </div>
                 )}
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                    <span style={{fontWeight:600}}>Total: {totalHours.toFixed(1)}h / week <InfoTip text="This is the gross scheduled hours total (before breaks). The schedule defines daily start/end times and which days are 'contracted'. The contract's Weekly Hours field sets the overtime threshold — they work together but are independent settings." /></span>
+                    <span style={{fontWeight:600}}>Total: {fmt.hours(totalHours)} / week <InfoTip text="This is the gross scheduled hours total (before breaks). The schedule defines daily start/end times and which days are 'contracted'. The contract's Weekly Hours field sets the overtime threshold — they work together but are independent settings." /></span>
                     <button className="btn btn-primary" onClick={save}>Save Schedule</button>
                 </div>
             </div>
@@ -1416,7 +1465,7 @@
                                                     <td>{e.clock_out}</td>
                                                     <td>{e.break_minutes || 0}min</td>
                                                     <td>
-                                                        <span style={{fontWeight:600, color: isLong ? 'var(--warning)' : 'var(--gray-800)'}}>{net.toFixed(2)}h</span>
+                                                        <span style={{fontWeight:600, color: isLong ? 'var(--warning)' : 'var(--gray-800)'}}>{fmt.hours(net)}</span>
                                                         {isLong && <span style={{marginLeft:'4px', fontSize:'11px', color:'var(--warning)'}}>Long shift</span>}
                                                     </td>
                                                     <td>
@@ -1689,7 +1738,7 @@
                                     </div>
                                     <div className="stat-card" style={{padding:'12px'}}>
                                         <div className="stat-label">Gross Worked</div>
-                                        <div style={{fontWeight:600, fontSize:'14px'}}>{(result.gross_worked_minutes / 60).toFixed(2)}h</div>
+                                        <div style={{fontWeight:600, fontSize:'14px'}}>{fmt.hours(result.gross_worked_minutes / 60)}</div>
                                     </div>
                                     <div className="stat-card" style={{padding:'12px'}}>
                                         <div className="stat-label">Break</div>
