@@ -59,17 +59,12 @@ class WageCalculator {
             $breakInfo['paid_duration'] = $breakInfo['is_paid'] ? $ruleSet['default_break_duration'] : 0;
         }
 
+        // Always deduct the full break duration from gross time.
+        // For paid breaks, the paid portion is added back as a separate W10 line.
+        $netWorkedMinutes = max(0, $workedMinutes - $breakInfo['duration']);
+
         if ($breakInfo['is_paid']) {
-            // Paid break: use capped paid_duration (Section 6.2)
             $paidBreakMinutes = $breakInfo['paid_duration'];
-            // Deduct unpaid excess if break exceeds default (e.g., 45min break, 30min default = 15min unpaid)
-            $unpaidExcess = $breakInfo['duration'] - $breakInfo['paid_duration'];
-            if ($unpaidExcess > 0) {
-                $netWorkedMinutes = max(0, $workedMinutes - $unpaidExcess);
-            }
-        } else {
-            // Unpaid break: deducted from hours
-            $netWorkedMinutes = max(0, $workedMinutes - $breakInfo['duration']);
         }
 
         $netWorkedHours = round($netWorkedMinutes / 60, 4);
@@ -919,7 +914,9 @@ class WageCalculator {
                 $breakMins = $defaultBreak;
             }
 
-            if (!$breaksPaid && $breakMins) {
+            // Always deduct full break from worked time.
+            // For paid breaks, the paid portion is a separate W10 wage line — not included in net hours.
+            if ($breakMins) {
                 $mins -= $breakMins;
             }
             $totalHours += max(0, $mins / 60);
@@ -939,20 +936,15 @@ class WageCalculator {
         $dayOfWeek = (int)date('N', strtotime($date));
         $total = 0;
 
-        // Determine if breaks are paid (only deduct if unpaid)
-        $breaksPaid = false;
-        if ($contract && $ruleSet) {
-            $breaksPaid = $this->areBreaksPaid($contract, $ruleSet);
-        }
-
         foreach ($schedule['days'] as $day) {
             if ($day['day_of_week'] == $dayOfWeek && $day['is_active']) {
                 $start = $this->timeToMinutes($day['start_time']);
                 $end = $this->timeToMinutes($day['end_time']);
                 if ($end <= $start) $end += 1440;
                 $minutes = $end - $start;
-                // Only deduct break from scheduled hours if breaks are unpaid
-                if (!$breaksPaid && $day['break_duration']) {
+                // Always deduct break from scheduled hours to match net worked hours calculation.
+                // Paid breaks are accounted for separately via W10 wage lines.
+                if ($day['break_duration']) {
                     $minutes -= $day['break_duration'];
                 }
                 $total += $minutes / 60;
