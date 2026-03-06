@@ -1145,6 +1145,7 @@
             rotation_order: current?.rotation_order || 1,
             rotation_start_date: current?.rotation_start_date || null,
         });
+        const [mismatchModal, setMismatchModal] = useState(null);
 
         const defaultDays = [1,2,3,4,5,6,7].map(d => ({
             day_of_week: d, is_active: d <= 5 ? 1 : 0,
@@ -1192,7 +1193,7 @@
             setScheduleIdx(0);
         };
 
-        const save = async () => {
+        const doSave = async (updateContractHours) => {
             const payload = {
                 employee_id: employee.id,
                 schedule_name: meta.schedule_name,
@@ -1205,7 +1206,26 @@
             } else {
                 await api('/schedules', 'POST', payload);
             }
+            // If user chose to update contract hours to match net schedule hours
+            if (updateContractHours && employee.contract?.id) {
+                await api(`/contracts/${employee.contract.id}`, 'PUT', {
+                    total_weekly_hours: netHours,
+                    changed_by: 'schedule-sync'
+                });
+            }
+            setMismatchModal(null);
             await onUpdate();
+        };
+
+        const save = async () => {
+            const contractHours = employee.contract?.total_weekly_hours;
+            // Check for mismatch: net schedule hours > contract weekly hours
+            if (contractHours && netHours > contractHours && employee.contract?.contract_type !== 'zero_hours') {
+                const diff = netHours - contractHours;
+                setMismatchModal({ contractHours, scheduleNet: netHours, diff });
+                return;
+            }
+            await doSave(false);
         };
 
         const totalHours = days.reduce((sum, d) => {
@@ -1216,6 +1236,21 @@
             if (mins < 0) mins += 1440;
             return sum + mins / 60;
         }, 0);
+
+        // Net hours = gross hours minus breaks
+        const netHours = days.reduce((sum, d) => {
+            if (!d.is_active || !d.start_time || !d.end_time) return sum;
+            const [sh, sm] = d.start_time.split(':').map(Number);
+            const [eh, em] = d.end_time.split(':').map(Number);
+            let mins = (eh * 60 + em) - (sh * 60 + sm);
+            if (mins < 0) mins += 1440;
+            if (d.break_duration) mins -= d.break_duration;
+            return sum + Math.max(0, mins) / 60;
+        }, 0);
+
+        const contractHours = employee.contract?.total_weekly_hours;
+        const isOverScheduled = !!(contractHours && netHours > contractHours && employee.contract?.contract_type !== 'zero_hours');
+        const overAmount = isOverScheduled ? netHours - contractHours : 0;
 
         // Group days by day_of_week for split shift display
         const block1Days = [1,2,3,4,5,6,7].map(dow => days.find(d => d.day_of_week === dow && d.block_number === 1) || { day_of_week: dow, is_active: 0, start_time: null, end_time: null, break_duration: null, block_number: 1 });
@@ -1319,10 +1354,65 @@
                         </div>
                     </div>
                 )}
-                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                    <span style={{fontWeight:600}}>Total: {fmt.hours(totalHours)} / week <InfoTip text="This is the gross scheduled hours total (before breaks). The schedule defines daily start/end times and which days are 'contracted'. The contract's Weekly Hours field sets the overtime threshold — they work together but are independent settings." /></span>
-                    <button className="btn btn-primary" onClick={save}>Save Schedule</button>
+                {/* Totals and warning */}
+                <div style={{marginBottom: isOverScheduled ? '0' : undefined}}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                        <div style={{display:'flex', flexDirection:'column', gap:'2px'}}>
+                            <span style={{fontWeight:600}}>
+                                Total: {fmt.hours(totalHours)} gross / {fmt.hours(netHours)} net per week
+                                {contractHours ? <span style={{color:'var(--gray-500)', fontWeight:400}}> (contract: {fmt.hours(contractHours)})</span> : null}
+                                {' '}<InfoTip text="Gross = total scheduled time. Net = after break deduction. The contract's Weekly Hours field sets the overtime threshold. When net schedule hours exceed contract hours, excess hours will be calculated as overtime each week." />
+                            </span>
+                        </div>
+                        <button className="btn btn-primary" onClick={save}>Save Schedule</button>
+                    </div>
+                    {isOverScheduled && (
+                        <div style={{marginTop:'8px', padding:'10px 14px', background:'var(--warning-light)', border:'1px solid #f59e0b', borderRadius:'var(--radius)', display:'flex', alignItems:'center', gap:'8px', fontSize:'13px'}}>
+                            <span style={{fontSize:'16px'}}>&#9888;</span>
+                            <span>
+                                <strong>Over-scheduled by {fmt.hours(overAmount)}:</strong> Net schedule ({fmt.hours(netHours)}) exceeds contract weekly hours ({fmt.hours(contractHours)}). Excess hours will trigger overtime each week.
+                            </span>
+                        </div>
+                    )}
                 </div>
+
+                {/* Schedule vs Contract Mismatch Modal */}
+                {mismatchModal && ReactDOM.createPortal(
+                    <div className="modal-overlay" onClick={() => setMismatchModal(null)}>
+                        <div className="modal" style={{maxWidth:'520px'}} onClick={e => e.stopPropagation()}>
+                            <div className="modal-header" style={{background:'var(--warning-light)', borderBottom:'1px solid #f59e0b'}}>
+                                <h3 style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                                    <span style={{fontSize:'20px'}}>&#9888;</span> Schedule Exceeds Contract Hours
+                                </h3>
+                                <button className="modal-close" onClick={() => setMismatchModal(null)}>&times;</button>
+                            </div>
+                            <div className="modal-body" style={{padding:'20px 24px'}}>
+                                <p style={{marginBottom:'16px', lineHeight:'1.6'}}>
+                                    The net schedule hours (<strong>{fmt.hours(mismatchModal.scheduleNet)}</strong>) exceed the contract's weekly hours
+                                    (<strong>{fmt.hours(mismatchModal.contractHours)}</strong>) by <strong>{fmt.hours(mismatchModal.diff)}</strong>.
+                                </p>
+                                <p style={{marginBottom:'20px', fontSize:'13px', color:'var(--gray-600)'}}>
+                                    This means the employee will automatically accumulate {fmt.hours(mismatchModal.diff)} of overtime every week based on their schedule alone. Choose how to proceed:
+                                </p>
+                                <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
+                                    <button className="btn btn-primary" style={{width:'100%', textAlign:'left', padding:'12px 16px'}} onClick={() => doSave(true)}>
+                                        <strong>Update contract to {fmt.hours(mismatchModal.scheduleNet)}</strong>
+                                        <br/><span style={{fontSize:'12px', opacity:0.8}}>Save schedule and set contract weekly hours to match net schedule hours</span>
+                                    </button>
+                                    <button className="btn btn-outline" style={{width:'100%', textAlign:'left', padding:'12px 16px'}} onClick={() => setMismatchModal(null)}>
+                                        <strong>Edit schedule</strong>
+                                        <br/><span style={{fontSize:'12px', color:'var(--gray-500)'}}>Go back and adjust the schedule to fit within {fmt.hours(mismatchModal.contractHours)}</span>
+                                    </button>
+                                    <button className="btn btn-outline" style={{width:'100%', textAlign:'left', padding:'12px 16px', borderColor:'var(--warning)', color:'var(--warning)'}} onClick={() => doSave(false)}>
+                                        <strong>Save anyway</strong>
+                                        <br/><span style={{fontSize:'12px', color:'var(--gray-500)'}}>Keep the schedule as-is — overtime will be generated each week</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
             </div>
         );
     }
