@@ -47,6 +47,8 @@ class Database {
                 tier1_rate REAL NOT NULL DEFAULT 50.0,
                 tier2_rate REAL NOT NULL DEFAULT 100.0,
                 flat_overtime_rate REAL NOT NULL DEFAULT 50.0,
+                schedule_change_enabled INTEGER NOT NULL DEFAULT 1,
+                schedule_change_rate REAL NOT NULL DEFAULT 50.0,
                 created_at TEXT DEFAULT (datetime('now')),
                 updated_at TEXT DEFAULT (datetime('now'))
             );
@@ -242,8 +244,8 @@ class Database {
         // ===== 1. Default Standard =====
         // Standard Danish full-time: tiered overtime, combined trigger, no balancing, cumulative stacking
         $this->pdo->exec("
-            INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate)
-            VALUES ('Default Standard', 'Standard Danish full-time rules. Tiered overtime (50% first 3h, then 100%) with combined trigger (per-day + weekly). No balancing period — every daily overrun and weekly excess triggers overtime immediately. Supplements stack cumulatively on top of overtime.', 'tiered', 'combined', 'none', 'cumulative', 'danish', 0, 30, 3.0, 50.0, 100.0, 50.0)
+            INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate, schedule_change_enabled, schedule_change_rate)
+            VALUES ('Default Standard', 'Standard Danish full-time rules. Tiered overtime (50% first 3h, then 100%) with combined trigger (per-day + weekly). No balancing period — every daily overrun and weekly excess triggers overtime immediately. Supplements stack cumulatively on top of overtime.', 'tiered', 'combined', 'none', 'cumulative', 'danish', 0, 30, 3.0, 50.0, 100.0, 50.0, 1, 50.0)
         ");
         $rs1 = (int)$this->pdo->lastInsertId();
         $this->insertIntervals($rs1, [
@@ -259,8 +261,8 @@ class Database {
         // Part-time retail: per-day trigger, weekly balancing, paid breaks
         // Daily overruns can be offset if total week stays under contract hours
         $this->pdo->exec("
-            INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate)
-            VALUES ('Retail Flex', 'Retail with weekly balancing and paid 30-min breaks. Per-day trigger detects daily schedule overruns, but weekly balancing forgives them if the total week stays under the contracted weekly hours. Good for part-timers with variable shifts.', 'tiered', 'per_day', 'weekly', 'cumulative', 'danish', 1, 30, 2.0, 50.0, 100.0, 50.0)
+            INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate, schedule_change_enabled, schedule_change_rate)
+            VALUES ('Retail Flex', 'Retail with weekly balancing and paid 30-min breaks. Per-day trigger detects daily schedule overruns, but weekly balancing forgives them if the total week stays under the contracted weekly hours. Good for part-timers with variable shifts.', 'tiered', 'per_day', 'weekly', 'cumulative', 'danish', 1, 30, 2.0, 50.0, 100.0, 50.0, 1, 50.0)
         ");
         $rs2 = (int)$this->pdo->lastInsertId();
         $this->insertIntervals($rs2, [
@@ -276,8 +278,8 @@ class Database {
         // Flat 50% overtime (no tiers), per-day trigger, highest-wins stacking
         // Only the single highest supplement/overtime rate applies — no stacking
         $this->pdo->exec("
-            INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate)
-            VALUES ('Night Shift Industrial', 'Industrial night shift rules. Flat 50% overtime (no tiers). Per-day trigger only. Highest-wins stacking: among all applicable rates (overtime, evening, night, weekend supplements), only the single highest percentage applies. Prevents double-dipping.', 'flat', 'per_day', 'none', 'highest_wins', 'danish', 0, 30, 3.0, 50.0, 100.0, 50.0)
+            INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate, schedule_change_enabled, schedule_change_rate)
+            VALUES ('Night Shift Industrial', 'Industrial night shift rules. Flat 50% overtime (no tiers). Per-day trigger only. Highest-wins stacking: among all applicable rates (overtime, evening, night, weekend supplements), only the single highest percentage applies. Prevents double-dipping.', 'flat', 'per_day', 'none', 'highest_wins', 'danish', 0, 30, 3.0, 50.0, 100.0, 50.0, 1, 50.0)
         ");
         $rs3 = (int)$this->pdo->lastInsertId();
         $this->insertIntervals($rs3, [
@@ -293,8 +295,8 @@ class Database {
         // Monthly balancing: overtime only when total month hours exceed monthly threshold
         // Allows flexible daily hours — long days offset by short days within the month
         $this->pdo->exec("
-            INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate)
-            VALUES ('Office Monthly Balance', 'Office workers with monthly balancing. Combined trigger detects daily/weekly overruns, but monthly balancing forgives them if the month total stays within threshold (weekly hours x weeks in month). Great for flex-time office arrangements.', 'tiered', 'combined', 'monthly', 'cumulative', 'danish', 0, 30, 3.0, 50.0, 100.0, 50.0)
+            INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate, schedule_change_enabled, schedule_change_rate)
+            VALUES ('Office Monthly Balance', 'Office workers with monthly balancing. Combined trigger detects daily/weekly overruns, but monthly balancing forgives them if the month total stays within threshold (weekly hours x weeks in month). Great for flex-time office arrangements.', 'tiered', 'combined', 'monthly', 'cumulative', 'danish', 0, 30, 3.0, 50.0, 100.0, 50.0, 1, 50.0)
         ");
         $rs4 = (int)$this->pdo->lastInsertId();
         $this->insertIntervals($rs4, [
@@ -310,8 +312,8 @@ class Database {
         // No overtime model at all — all hours paid at base rate
         // Minimal supplements for evening/night/holiday
         $this->pdo->exec("
-            INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate)
-            VALUES ('Zero Hours Basic', 'Minimal rules for zero-hours and casual contracts. No overtime model — all hours paid at base rate regardless of total. Small evening/night supplements only. No weekend premium (works all days equally). Holiday supplement at 50%.', 'none', 'per_day', 'none', 'cumulative', 'danish', 0, 30, 3.0, 50.0, 100.0, 50.0)
+            INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate, schedule_change_enabled, schedule_change_rate)
+            VALUES ('Zero Hours Basic', 'Minimal rules for zero-hours and casual contracts. No overtime model — all hours paid at base rate regardless of total. Small evening/night supplements only. No weekend premium (works all days equally). Holiday supplement at 50%.', 'none', 'per_day', 'none', 'cumulative', 'danish', 0, 30, 3.0, 50.0, 100.0, 50.0, 0, 0.0)
         ");
         $rs5 = (int)$this->pdo->lastInsertId();
         $this->insertIntervals($rs5, [

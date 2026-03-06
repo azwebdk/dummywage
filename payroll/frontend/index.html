@@ -530,6 +530,7 @@
                                             <span className="config-tag"><strong>Balance:</strong> {rs.balancing_mode}</span>
                                             <span className="config-tag"><strong>Stack:</strong> {rs.stacking_mode}</span>
                                             <span className="config-tag"><strong>Breaks:</strong> {rs.breaks_paid ? 'Paid' : 'Unpaid'} ({rs.default_break_duration}min)</span>
+                                            <span className="config-tag"><strong>W09:</strong> {parseInt(rs.schedule_change_enabled) ? `+${rs.schedule_change_rate}%` : 'Off'}</span>
                                         </div>
                                         <div style={{display:'flex', gap:'8px'}}>
                                             <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); setEditing(rs); setShowForm(true); }}>Edit</button>
@@ -551,7 +552,8 @@
             name: '', description: '', overtime_model: 'tiered', overtime_trigger_mode: 'combined',
             balancing_mode: 'none', balancing_period_weeks: null, stacking_mode: 'cumulative',
             holiday_calendar: 'danish', breaks_paid: 0, default_break_duration: 30,
-            tier1_threshold: 3, tier1_rate: 50, tier2_rate: 100, flat_overtime_rate: 50
+            tier1_threshold: 3, tier1_rate: 50, tier2_rate: 100, flat_overtime_rate: 50,
+            schedule_change_enabled: 1, schedule_change_rate: 50
         });
         const [tab, setTab] = useState('general');
         const [intervals, setIntervals] = useState([]);
@@ -604,6 +606,19 @@
                                         <option value="supplement_replaces_overtime">Supplement replaces overtime</option>
                                     </select>
                                 </div>
+                                <div className="form-group">
+                                    <label style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                                        <input type="checkbox" checked={!!parseInt(form.schedule_change_enabled)} onChange={e => set('schedule_change_enabled', e.target.checked ? 1 : 0)} />
+                                        Schedule-change supplement (W09) <InfoTip text="When enabled, employees who work on a day they are NOT scheduled for automatically receive a W09 supplement. Common in Danish collective agreements for short-notice schedule changes. Does not apply to zero-hours workers (no schedule) or holidays." />
+                                    </label>
+                                </div>
+                                {!!parseInt(form.schedule_change_enabled) && (
+                                    <div className="form-group">
+                                        <label>Schedule-change Rate (%)</label>
+                                        <input type="number" step="1" value={form.schedule_change_rate} onChange={e => set('schedule_change_rate', parseFloat(e.target.value) || 0)} />
+                                        <small style={{color:'var(--gray-400)'}}>50% = +50% of base rate on non-scheduled days</small>
+                                    </div>
+                                )}
                             </div>
                         )}
                         {tab === 'overtime' && (

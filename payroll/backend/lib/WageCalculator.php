@@ -90,22 +90,23 @@ class WageCalculator {
         );
 
         // === STEP 10: Special supplements ===
-        // Schedule-change supplement if working non-contracted day with <4 weeks notice
-        // Only applies when employee HAS a schedule — zero-hours workers with no schedule don't get this
-        if ($dayType['is_non_contracted'] && !$dayType['is_holiday'] && $schedule !== null) {
-            // Simplified: always apply schedule change supplement for non-contracted days
-            $schedChangeRate = 50.0; // default +50%
-            $wageLines[] = [
-                'wage_code' => 'W09',
-                'wage_type' => 'Schedule-change supplement',
-                'hours' => $netWorkedHours,
-                'base_rate' => $contract['base_hourly_wage'],
-                'multiplier' => 1.0,
-                'supplement_pct' => $schedChangeRate,
-                'amount' => round($netWorkedHours * $contract['base_hourly_wage'] * ($schedChangeRate / 100), 2),
-                'is_break_time' => 0,
-                'notes' => 'Non-contracted day supplement'
-            ];
+        // Schedule-change supplement if working non-contracted day
+        // Only applies when: (a) enabled in rule set, (b) employee HAS a schedule, (c) not a holiday
+        if (!empty($ruleSet['schedule_change_enabled']) && $dayType['is_non_contracted'] && !$dayType['is_holiday'] && $schedule !== null) {
+            $schedChangeRate = (float)($ruleSet['schedule_change_rate'] ?? 50.0);
+            if ($schedChangeRate > 0) {
+                $wageLines[] = [
+                    'wage_code' => 'W09',
+                    'wage_type' => 'Schedule-change supplement',
+                    'hours' => $netWorkedHours,
+                    'base_rate' => $contract['base_hourly_wage'],
+                    'multiplier' => 1.0,
+                    'supplement_pct' => $schedChangeRate,
+                    'amount' => round($netWorkedHours * $contract['base_hourly_wage'] * ($schedChangeRate / 100), 2),
+                    'is_break_time' => 0,
+                    'notes' => 'Non-contracted day supplement'
+                ];
+            }
         }
 
         // Guaranteed hours (employer cancellation)

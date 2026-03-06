@@ -100,8 +100,8 @@ function handleRuleSets(PDO $pdo, string $method, ?string $id, ?string $sub, ?st
 
         case 'POST':
             $stmt = $pdo->prepare("
-                INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, balancing_period_weeks, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate)
-                VALUES (:name, :description, :overtime_model, :overtime_trigger_mode, :balancing_mode, :balancing_period_weeks, :stacking_mode, :holiday_calendar, :breaks_paid, :default_break_duration, :tier1_threshold, :tier1_rate, :tier2_rate, :flat_overtime_rate)
+                INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, balancing_period_weeks, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate, schedule_change_enabled, schedule_change_rate)
+                VALUES (:name, :description, :overtime_model, :overtime_trigger_mode, :balancing_mode, :balancing_period_weeks, :stacking_mode, :holiday_calendar, :breaks_paid, :default_break_duration, :tier1_threshold, :tier1_rate, :tier2_rate, :flat_overtime_rate, :schedule_change_enabled, :schedule_change_rate)
             ");
             $stmt->execute([
                 'name' => $body['name'] ?? 'New Rule Set',
@@ -118,12 +118,14 @@ function handleRuleSets(PDO $pdo, string $method, ?string $id, ?string $sub, ?st
                 'tier1_rate' => $body['tier1_rate'] ?? 50.0,
                 'tier2_rate' => $body['tier2_rate'] ?? 100.0,
                 'flat_overtime_rate' => $body['flat_overtime_rate'] ?? 50.0,
+                'schedule_change_enabled' => $body['schedule_change_enabled'] ?? 1,
+                'schedule_change_rate' => $body['schedule_change_rate'] ?? 50.0,
             ]);
             return ['id' => $pdo->lastInsertId(), 'message' => 'Created'];
 
         case 'PUT':
             if (!$id) throw new Exception("ID required");
-            $fields = ['name','description','overtime_model','overtime_trigger_mode','balancing_mode','balancing_period_weeks','stacking_mode','holiday_calendar','breaks_paid','default_break_duration','tier1_threshold','tier1_rate','tier2_rate','flat_overtime_rate'];
+            $fields = ['name','description','overtime_model','overtime_trigger_mode','balancing_mode','balancing_period_weeks','stacking_mode','holiday_calendar','breaks_paid','default_break_duration','tier1_threshold','tier1_rate','tier2_rate','flat_overtime_rate','schedule_change_enabled','schedule_change_rate'];
             $sets = [];
             $params = [];
             foreach ($fields as $f) {
