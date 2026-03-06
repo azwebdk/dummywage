@@ -673,9 +673,9 @@
                                         <option value="supplement_replaces_overtime">Supplement replaces overtime</option>
                                     </select>
                                 </div>
-                                <div className="form-group">
-                                    <label style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                                        <input type="checkbox" checked={!!parseInt(form.schedule_change_enabled)} onChange={e => set('schedule_change_enabled', e.target.checked ? 1 : 0)} />
+                                <div style={{gridColumn:'1/-1', marginBottom:'16px'}}>
+                                    <label style={{display:'flex', alignItems:'center', gap:'6px', cursor:'pointer', fontSize:'13px', fontWeight:500, color:'var(--gray-700)'}}>
+                                        <input type="checkbox" style={{width:'auto'}} checked={!!parseInt(form.schedule_change_enabled)} onChange={e => set('schedule_change_enabled', e.target.checked ? 1 : 0)} />
                                         Schedule-change supplement (W09) <InfoTip text="When enabled, employees who work on a day they are NOT scheduled for automatically receive a W09 supplement. Common in Danish collective agreements for short-notice schedule changes. Does not apply to zero-hours workers (no schedule) or holidays." />
                                     </label>
                                 </div>
