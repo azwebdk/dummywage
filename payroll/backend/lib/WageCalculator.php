@@ -40,7 +40,7 @@ class WageCalculator {
         $dayType = $this->classifyDay($entry['date'], $contract, $schedule, $ruleSet['holiday_calendar']);
 
         // === STEP 2: Load applicable schedule (with mid-week contract handling) ===
-        $scheduledHours = $this->getScheduledHoursForDay($schedule, $entry['date']);
+        $scheduledHours = $this->getScheduledHoursForDay($schedule, $entry['date'], $contract, $ruleSet);
 
         // === STEP 3: Handle breaks ===
         $breakInfo = $this->resolveBreaks($entry, $contract, $ruleSet, $schedule);
@@ -49,7 +49,9 @@ class WageCalculator {
         $paidBreakMinutes = 0;
 
         // EU Working Time Directive: auto-deduct break if none registered and 6+ hours worked
-        if ($workedMinutes >= 360 && ($entry['break_minutes'] === null || $entry['break_minutes'] == 0)) {
+        // Note: break_minutes === null means "no break registered" (use defaults),
+        // while break_minutes === 0 means "employee explicitly took no break"
+        if ($workedMinutes >= 360 && $entry['break_minutes'] === null) {
             $this->addWarning($entry['employee_id'], $entry['date'], 'no_break',
                 'Employee worked 6+ hours without a registered break. Auto-deducting default break duration.');
             // Force default break duration when no break was registered
@@ -252,7 +254,9 @@ class WageCalculator {
     }
 
     /**
-     * Step 4: Split work period into time-of-day intervals
+     * Step 4: Split work period into time-of-day intervals.
+     * Returns array of slices, each containing ALL group winners for that time period
+     * (multi-group stacking: different groups stack, within-group highest priority wins).
      */
     private function splitIntoIntervals(string $clockIn, string $clockOut, array $intervals, array $dayType): array {
         $slices = [];
@@ -260,21 +264,16 @@ class WageCalculator {
         $outTime = strtotime($clockOut);
         if ($outTime <= $inTime) $outTime += 86400;
 
-        $baseDate = date('Y-m-d', $inTime);
-
-        // For each minute of the shift, determine which interval it belongs to
-        // We'll work in hour granularity for efficiency
         $current = $inTime;
         while ($current < $outTime) {
             $currentHour = (int)date('G', $current);
             $currentMin = (int)date('i', $current);
             $timeStr = sprintf('%02d:%02d', $currentHour, $currentMin);
 
-            $matchedInterval = $this->findMatchingInterval($timeStr, $intervals, $dayType);
+            // Get ALL group winners for this time point
+            $groupWinners = $this->findMatchingIntervalsByGroup($timeStr, $intervals, $dayType);
 
-            // Find how long this interval lasts
             $sliceEnd = $outTime;
-            // Check next minute boundary where interval might change
             $nextBoundary = $this->findNextIntervalBoundary($current, $outTime, $intervals, $dayType);
             if ($nextBoundary < $sliceEnd) $sliceEnd = $nextBoundary;
 
@@ -282,14 +281,23 @@ class WageCalculator {
             $sliceHours = round($sliceMinutes / 60, 4);
 
             if ($sliceHours > 0) {
-                $key = $matchedInterval ? $matchedInterval['id'] . '_' . $matchedInterval['name'] : 'normal';
-                if (!isset($slices[$key])) {
-                    $slices[$key] = [
-                        'interval' => $matchedInterval,
-                        'hours' => 0,
-                    ];
+                // Add hours to each group winner (they all stack)
+                if (empty($groupWinners)) {
+                    // No supplement — normal time
+                    $key = 'normal';
+                    if (!isset($slices[$key])) {
+                        $slices[$key] = ['interval' => null, 'hours' => 0];
+                    }
+                    $slices[$key]['hours'] += $sliceHours;
+                } else {
+                    foreach ($groupWinners as $group => $interval) {
+                        $key = $interval['id'] . '_' . $interval['name'];
+                        if (!isset($slices[$key])) {
+                            $slices[$key] = ['interval' => $interval, 'hours' => 0];
+                        }
+                        $slices[$key]['hours'] += $sliceHours;
+                    }
                 }
-                $slices[$key]['hours'] += $sliceHours;
             }
 
             $current = $sliceEnd;
@@ -299,12 +307,30 @@ class WageCalculator {
     }
 
     /**
-     * Find which supplement interval matches a given time and day type
+     * Find which supplement interval matches a given time and day type.
+     * Returns the single highest-priority match (legacy behavior for splitIntoIntervals).
      */
     private function findMatchingInterval(string $time, array $intervals, array $dayType): ?array {
+        $winners = $this->findMatchingIntervalsByGroup($time, $intervals, $dayType);
+        if (empty($winners)) return null;
+        // Return the highest-priority winner across all groups (for interval boundary detection)
+        $best = null;
+        foreach ($winners as $interval) {
+            if (!$best || $interval['priority'] > $best['priority']) {
+                $best = $interval;
+            }
+        }
+        return $best;
+    }
+
+    /**
+     * Find the winning interval per stacking group for a given time and day type.
+     * Within each group, the highest-priority interval wins.
+     * Returns array keyed by stacking_group.
+     */
+    private function findMatchingIntervalsByGroup(string $time, array $intervals, array $dayType): array {
         $timeMinutes = $this->timeToMinutes($time);
-        $bestMatch = null;
-        $bestPriority = -1;
+        $groupWinners = []; // group => ['interval' => ..., 'priority' => ...]
 
         foreach ($intervals as $interval) {
             if (!$this->intervalAppliesToDay($interval, $dayType)) continue;
@@ -316,17 +342,18 @@ class WageCalculator {
             if ($endMin > $startMin) {
                 $inRange = $timeMinutes >= $startMin && $timeMinutes < $endMin;
             } else {
-                // Crosses midnight
                 $inRange = $timeMinutes >= $startMin || $timeMinutes < $endMin;
             }
 
-            if ($inRange && $interval['priority'] > $bestPriority) {
-                $bestMatch = $interval;
-                $bestPriority = $interval['priority'];
+            if ($inRange) {
+                $group = $interval['stacking_group'];
+                if (!isset($groupWinners[$group]) || $interval['priority'] > $groupWinners[$group]['priority']) {
+                    $groupWinners[$group] = $interval;
+                }
             }
         }
 
-        return $bestMatch;
+        return $groupWinners;
     }
 
     private function intervalAppliesToDay(array $interval, array $dayType): bool {
@@ -382,7 +409,7 @@ class WageCalculator {
             return ['normal_hours' => $netWorkedHours, 'overtime_hours' => 0];
         }
 
-        $scheduledHoursToday = $this->getScheduledHoursForDay($schedule, $entry['date']);
+        $scheduledHoursToday = $this->getScheduledHoursForDay($schedule, $entry['date'], $contract, $ruleSet);
         $dayType = $this->classifyDay($entry['date'], $contract, $schedule, $ruleSet['holiday_calendar']);
 
         $overtimeHours = 0;
@@ -473,6 +500,10 @@ class WageCalculator {
             return $currentContract['total_weekly_hours'];
         }
 
+        // Count actual scheduled work days (not hardcoded 5)
+        $scheduledDays = $this->countScheduledDaysInWeek($employeeId);
+        $workDays = $scheduledDays > 0 ? $scheduledDays : 5; // fallback to 5 if no schedule
+
         // Pro-rata calculation
         $totalThreshold = 0;
         $currentStart = $monday;
@@ -481,7 +512,7 @@ class WageCalculator {
         foreach ($changes as $change) {
             $changeDate = $change['effective_date'];
             $daysInSegment = $this->daysBetween($currentStart, $changeDate);
-            $dailyRate = $currentWeeklyHours / 5; // Assuming 5-day work week
+            $dailyRate = $currentWeeklyHours / $workDays;
             $totalThreshold += $daysInSegment * $dailyRate;
 
             $currentWeeklyHours = (float)$change['new_value'];
@@ -490,10 +521,24 @@ class WageCalculator {
 
         // Remaining days
         $daysRemaining = $this->daysBetween($currentStart, date('Y-m-d', strtotime($sunday . ' +1 day')));
-        $dailyRate = $currentWeeklyHours / 5;
+        $dailyRate = $currentWeeklyHours / $workDays;
         $totalThreshold += $daysRemaining * $dailyRate;
 
         return round($totalThreshold, 4);
+    }
+
+    /**
+     * Count how many days per week an employee is scheduled to work
+     */
+    private function countScheduledDaysInWeek(int $employeeId): int {
+        $stmt = $this->pdo->prepare("
+            SELECT sd.day_of_week FROM schedule_days sd
+            JOIN employee_schedules es ON es.id = sd.schedule_id
+            WHERE es.employee_id = ? AND es.is_active = 1 AND sd.is_active = 1
+            GROUP BY sd.day_of_week
+        ");
+        $stmt->execute([$employeeId]);
+        return count($stmt->fetchAll());
     }
 
     private function daysBetween(string $from, string $to): int {
@@ -653,16 +698,17 @@ class WageCalculator {
                 } else {
                     // Overtime winner: base rate already in W01, so supplement-only amount here
                     $code = $highest['pct'] >= ($ruleSet['tier2_rate'] ?? 100) ? 'W03' : 'W02';
+                    $supplementMultiplier = $highest['pct'] / 100;
                     $lines[] = [
                         'wage_code' => $code,
-                        'wage_type' => $code === 'W03' ? 'Overtime Tier 2' : 'Overtime Tier 1',
+                        'wage_type' => $code === 'W03' ? 'Overtime Tier 2 (highest wins)' : 'Overtime Tier 1 (highest wins)',
                         'hours' => round($totalHrs, 4),
                         'base_rate' => $baseRate,
-                        'multiplier' => $highest['pct'] / 100,
+                        'multiplier' => 1 + $supplementMultiplier, // Display as full multiplier for consistency
                         'supplement_pct' => $highest['pct'],
-                        'amount' => round($totalHrs * $baseRate * ($highest['pct'] / 100), 2),
+                        'amount' => round($totalHrs * $baseRate * $supplementMultiplier, 2),
                         'is_break_time' => 0,
-                        'notes' => "Highest wins: +{$highest['pct']}%"
+                        'notes' => "Highest wins: +{$highest['pct']}% (supplement portion only, base in W01)"
                     ];
                 }
                 $supplementLines = []; // Already handled
@@ -713,13 +759,9 @@ class WageCalculator {
     /**
      * Calculate supplement lines from time slices.
      *
-     * Each time slice already has its winning interval (resolved by findMatchingInterval
-     * which picks highest priority for overlapping intervals at each time point).
-     * We aggregate by wage_code so each time-of-day supplement gets its correct hours.
-     *
-     * Note: For multi-group overlap (e.g., Group A + Group C at same time),
-     * findMatchingInterval only returns one winner. Full multi-group stacking
-     * would require returning all matching intervals per slice.
+     * Each time slice contains the winning interval per stacking group.
+     * Within each group, highest-priority wins. Between groups, supplements stack.
+     * We aggregate by wage_code so each supplement gets its correct hours.
      */
     private function calculateSupplements(array $timeSlices, float $baseRate, string $stackingMode, array $ruleSet, array $tierBreakdown, float $totalHours): array {
         $supplementLines = [];
@@ -800,10 +842,9 @@ class WageCalculator {
         // Use PHP-based calculation with proper break deduction
         $priorHours = $this->getPriorHoursInRange($entry['employee_id'], $monthStart, $monthEnd, $date, $contract, $ruleSet);
 
-        // Monthly threshold: weekly hours * weeks in month
-        $daysInMonth = (int)date('t', strtotime($date));
-        $weeksInMonth = $daysInMonth / 7;
-        $monthlyThreshold = $contract['total_weekly_hours'] * $weeksInMonth;
+        // Monthly threshold: standard formula weekly * 52 / 12 = average weeks per month
+        // This gives a consistent 4.3333 weeks/month regardless of calendar month length
+        $monthlyThreshold = $contract['total_weekly_hours'] * 52 / 12;
 
         $totalMonthHours = $priorHours + $todayHours;
         $monthlyOvertime = max(0, $totalMonthHours - $monthlyThreshold);
@@ -866,12 +907,20 @@ class WageCalculator {
         $entries = $stmt->fetchAll();
 
         $breaksPaid = $this->areBreaksPaid($contract, $ruleSet);
+        $defaultBreak = $ruleSet['default_break_duration'];
         $totalHours = 0;
 
         foreach ($entries as $e) {
             $mins = $this->calcWorkedMinutes($e['clock_in'], $e['clock_out']);
-            if (!$breaksPaid && $e['break_minutes']) {
-                $mins -= $e['break_minutes'];
+
+            // Determine effective break: if no break registered and 6+ hours, apply default
+            $breakMins = $e['break_minutes'];
+            if ($breakMins === null && $mins >= 360) {
+                $breakMins = $defaultBreak;
+            }
+
+            if (!$breaksPaid && $breakMins) {
+                $mins -= $breakMins;
             }
             $totalHours += max(0, $mins / 60);
         }
@@ -885,18 +934,27 @@ class WageCalculator {
         return (bool)$ruleSet['breaks_paid'];
     }
 
-    private function getScheduledHoursForDay(?array $schedule, string $date): float {
+    private function getScheduledHoursForDay(?array $schedule, string $date, ?array $contract = null, ?array $ruleSet = null): float {
         if (!$schedule) return 0;
         $dayOfWeek = (int)date('N', strtotime($date));
         $total = 0;
+
+        // Determine if breaks are paid (only deduct if unpaid)
+        $breaksPaid = false;
+        if ($contract && $ruleSet) {
+            $breaksPaid = $this->areBreaksPaid($contract, $ruleSet);
+        }
+
         foreach ($schedule['days'] as $day) {
             if ($day['day_of_week'] == $dayOfWeek && $day['is_active']) {
                 $start = $this->timeToMinutes($day['start_time']);
                 $end = $this->timeToMinutes($day['end_time']);
                 if ($end <= $start) $end += 1440;
                 $minutes = $end - $start;
-                // Deduct break if unpaid
-                if ($day['break_duration']) $minutes -= $day['break_duration'];
+                // Only deduct break from scheduled hours if breaks are unpaid
+                if (!$breaksPaid && $day['break_duration']) {
+                    $minutes -= $day['break_duration'];
+                }
                 $total += $minutes / 60;
             }
         }

@@ -387,13 +387,31 @@
     function DashboardPage() {
         const { setPage } = useContext(AppContext);
         const [data, setData] = useState(null);
+        const [recalculating, setRecalculating] = useState(false);
         useEffect(() => { api('/dashboard').then(setData).catch(console.error); }, []);
+
+        const bulkRecalculate = async () => {
+            if (!confirm('Recalculate all wage lines for all time entries? This may take a moment.')) return;
+            setRecalculating(true);
+            try {
+                const res = await api('/calculate/bulk', 'POST');
+                alert(res.message);
+                const d = await api('/dashboard');
+                setData(d);
+            } catch(e) { alert('Error: ' + e.message); }
+            setRecalculating(false);
+        };
 
         if (!data) return <div className="page-body"><p>Loading...</p></div>;
 
         return (
             <div>
-                <div className="page-header"><h2>Dashboard</h2></div>
+                <div className="page-header" style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <h2>Dashboard</h2>
+                    <button className="btn btn-outline btn-sm" onClick={bulkRecalculate} disabled={recalculating}>
+                        {recalculating ? 'Recalculating...' : 'Recalculate All'}
+                    </button>
+                </div>
                 <div className="page-body">
                     <div className="stats-grid">
                         <div className="stat-card stat-card--blue" style={{cursor:'pointer'}} onClick={() => setPage('employees')}>
@@ -809,13 +827,13 @@
                         <label>Wage Code</label>
                         <select value={form.wage_code} onChange={e => set('wage_code', e.target.value)}>
                             {Object.entries(WAGE_CODE_LABELS).map(([c, label]) => {
-                                const disabled = ['W01','W02','W03','W10','W11'].includes(c);
+                                const disabled = ['W01','W02','W03','W09','W10','W11'].includes(c);
                                 return <option key={c} value={c} disabled={disabled} style={disabled ? {color:'#9ca3af'} : {}}>{c} — {label}{disabled ? ' (auto)' : ''}</option>;
                             })}
                         </select>
                     </div>
                     <div className="form-group"><label>Start Time</label><input type="time" value={form.start_time} onChange={e => set('start_time', e.target.value)} /></div>
-                    <div className="form-group"><label>End Time</label><input value={form.end_time} onChange={e => set('end_time', e.target.value)} placeholder="e.g. 24:00" /></div>
+                    <div className="form-group"><label>End Time</label><input type="time" value={form.end_time === '24:00' ? '23:59' : form.end_time} onChange={e => set('end_time', e.target.value)} /><label style={{display:'flex',alignItems:'center',gap:'4px',marginTop:'4px',fontSize:'12px'}}><input type="checkbox" checked={form.end_time === '24:00'} onChange={e => set('end_time', e.target.checked ? '24:00' : '23:00')} /> Midnight (24:00)</label></div>
                     <div className="form-group">
                         <label>Rate Type</label>
                         <select value={form.rate_type} onChange={e => set('rate_type', e.target.value)}>
@@ -1071,26 +1089,66 @@
 
     function ScheduleEditor({ employee, onUpdate }) {
         const schedules = employee.schedules || [];
-        const [current, setCurrent] = useState(schedules[0] || null);
-        const [days, setDays] = useState(
-            current?.days?.length > 0 ? current.days : [1,2,3,4,5,6,7].map(d => ({
-                day_of_week: d, is_active: d <= 5 ? 1 : 0,
-                start_time: d <= 5 ? '08:00' : null,
-                end_time: d <= 5 ? '16:00' : null,
-                break_duration: null, block_number: 1
-            }))
-        );
+        const [scheduleIdx, setScheduleIdx] = useState(0);
+        const current = schedules[scheduleIdx] || null;
+        const [meta, setMeta] = useState({
+            schedule_name: current?.schedule_name || 'Default',
+            rotation_order: current?.rotation_order || 1,
+            rotation_start_date: current?.rotation_start_date || null,
+        });
 
-        const setDay = (dow, field, value) => {
-            setDays(prev => prev.map(d => d.day_of_week === dow ? {...d, [field]: value} : d));
+        const defaultDays = [1,2,3,4,5,6,7].map(d => ({
+            day_of_week: d, is_active: d <= 5 ? 1 : 0,
+            start_time: d <= 5 ? '08:00' : null,
+            end_time: d <= 5 ? '16:00' : null,
+            break_duration: null, block_number: 1
+        }));
+        const [days, setDays] = useState(current?.days?.length > 0 ? current.days : defaultDays);
+
+        // Sync state when switching between schedules
+        const switchSchedule = (idx) => {
+            const s = schedules[idx] || null;
+            setScheduleIdx(idx);
+            setMeta({
+                schedule_name: s?.schedule_name || 'Default',
+                rotation_order: s?.rotation_order || (idx + 1),
+                rotation_start_date: s?.rotation_start_date || null,
+            });
+            setDays(s?.days?.length > 0 ? s.days : defaultDays);
+        };
+
+        const setDay = (dow, block, field, value) => {
+            setDays(prev => prev.map(d => (d.day_of_week === dow && d.block_number === block) ? {...d, [field]: value} : d));
+        };
+
+        const addSplit = (dow) => {
+            setDays(prev => [...prev, { day_of_week: dow, is_active: 1, start_time: '13:00', end_time: '17:00', break_duration: null, block_number: 2 }]);
+        };
+
+        const removeSplit = (dow) => {
+            setDays(prev => prev.filter(d => !(d.day_of_week === dow && d.block_number === 2)));
+        };
+
+        const addNewSchedule = () => {
+            setScheduleIdx(schedules.length); // point to new (unsaved)
+            setMeta({ schedule_name: `Rotation ${schedules.length + 1}`, rotation_order: schedules.length + 1, rotation_start_date: null });
+            setDays(defaultDays);
+        };
+
+        const deleteSchedule = async () => {
+            if (!current?.id) return;
+            if (!confirm('Delete this schedule?')) return;
+            await api(`/schedules/${current.id}`, 'DELETE');
+            await onUpdate();
+            setScheduleIdx(0);
         };
 
         const save = async () => {
             const payload = {
                 employee_id: employee.id,
-                schedule_name: current?.schedule_name || 'Default',
-                rotation_order: current?.rotation_order || 1,
-                rotation_start_date: current?.rotation_start_date || null,
+                schedule_name: meta.schedule_name,
+                rotation_order: meta.rotation_order,
+                rotation_start_date: meta.rotation_start_date,
                 days
             };
             if (current?.id) {
@@ -1110,45 +1168,108 @@
             return sum + mins / 60;
         }, 0);
 
+        // Group days by day_of_week for split shift display
+        const block1Days = [1,2,3,4,5,6,7].map(dow => days.find(d => d.day_of_week === dow && d.block_number === 1) || { day_of_week: dow, is_active: 0, start_time: null, end_time: null, break_duration: null, block_number: 1 });
+        const hasSplit = (dow) => days.some(d => d.day_of_week === dow && d.block_number === 2);
+        const getBlock2 = (dow) => days.find(d => d.day_of_week === dow && d.block_number === 2);
+
         return (
             <div>
+                {/* Schedule tabs for multi-schedule navigation */}
+                {(schedules.length > 1 || schedules.length > 0) && (
+                    <div style={{display:'flex', gap:'8px', marginBottom:'12px', flexWrap:'wrap', alignItems:'center'}}>
+                        {schedules.map((s, i) => (
+                            <button key={s.id} className={`btn btn-sm ${i === scheduleIdx ? 'btn-primary' : 'btn-outline'}`}
+                                onClick={() => switchSchedule(i)}>
+                                {s.schedule_name || `Schedule ${i+1}`}
+                            </button>
+                        ))}
+                        <button className="btn btn-sm btn-outline" onClick={addNewSchedule} title="Add rotation schedule">+ Add Schedule</button>
+                        {schedules.length > 1 && current?.id && (
+                            <button className="btn btn-sm btn-outline" style={{color:'var(--danger)',borderColor:'var(--danger)'}} onClick={deleteSchedule}>Delete</button>
+                        )}
+                    </div>
+                )}
+
                 <div className="form-row" style={{marginBottom:'16px'}}>
-                    <div className="form-group"><label>Schedule Name</label><input value={current?.schedule_name || 'Default'} onChange={e => setCurrent(prev => ({...prev, schedule_name: e.target.value}))} /></div>
-                    <div className="form-group"><label>Rotation Order</label><input type="number" value={current?.rotation_order || 1} onChange={e => setCurrent(prev => ({...prev, rotation_order: parseInt(e.target.value)}))} /></div>
-                    <div className="form-group"><label>Rotation Start</label><input type="date" value={current?.rotation_start_date || ''} onChange={e => setCurrent(prev => ({...prev, rotation_start_date: e.target.value || null}))} /></div>
+                    <div className="form-group"><label>Schedule Name</label><input value={meta.schedule_name} onChange={e => setMeta(prev => ({...prev, schedule_name: e.target.value}))} /></div>
+                    <div className="form-group"><label>Rotation Order <InfoTip text="For rotating schedules: determines the order in which schedules cycle. E.g., order 1 applies first week, order 2 the next, etc." /></label><input type="number" value={meta.rotation_order} onChange={e => setMeta(prev => ({...prev, rotation_order: parseInt(e.target.value)}))} /></div>
+                    <div className="form-group"><label>Rotation Start <InfoTip text="The date when this rotation cycle begins. Required when using multiple rotating schedules." /></label><input type="date" value={meta.rotation_start_date || ''} onChange={e => setMeta(prev => ({...prev, rotation_start_date: e.target.value || null}))} /></div>
                 </div>
 
-                <div className="schedule-grid" style={{marginBottom:'16px'}}>
+                <div className="schedule-grid" style={{marginBottom:'8px'}}>
                     <div className="schedule-cell schedule-header"></div>
                     {[1,2,3,4,5,6,7].map(d => <div key={d} className="schedule-cell schedule-header">{DAYS_SHORT[d]}</div>)}
                     <div className="schedule-cell schedule-header">Active</div>
-                    {days.map(d => (
+                    {block1Days.map(d => (
                         <div key={'a'+d.day_of_week} className={`schedule-cell ${d.is_active ? 'schedule-day-active' : ''}`} style={{textAlign:'center'}}>
                             <label className="toggle">
-                                <input type="checkbox" checked={!!d.is_active} onChange={e => setDay(d.day_of_week, 'is_active', e.target.checked ? 1 : 0)} />
+                                <input type="checkbox" checked={!!d.is_active} onChange={e => setDay(d.day_of_week, 1, 'is_active', e.target.checked ? 1 : 0)} />
                                 <span className="toggle-slider"></span>
                             </label>
                         </div>
                     ))}
                     <div className="schedule-cell schedule-header">Start</div>
-                    {days.map(d => (
+                    {block1Days.map(d => (
                         <div key={'s'+d.day_of_week} className="schedule-cell">
-                            {d.is_active ? <input type="time" value={d.start_time || ''} onChange={e => setDay(d.day_of_week, 'start_time', e.target.value)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">OFF</div>}
+                            {d.is_active ? <input type="time" value={d.start_time || ''} onChange={e => setDay(d.day_of_week, 1, 'start_time', e.target.value)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">OFF</div>}
                         </div>
                     ))}
                     <div className="schedule-cell schedule-header">End</div>
-                    {days.map(d => (
+                    {block1Days.map(d => (
                         <div key={'e'+d.day_of_week} className="schedule-cell">
-                            {d.is_active ? <input type="time" value={d.end_time || ''} onChange={e => setDay(d.day_of_week, 'end_time', e.target.value)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">OFF</div>}
+                            {d.is_active ? <input type="time" value={d.end_time || ''} onChange={e => setDay(d.day_of_week, 1, 'end_time', e.target.value)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">OFF</div>}
                         </div>
                     ))}
                     <div className="schedule-cell schedule-header">Break</div>
-                    {days.map(d => (
+                    {block1Days.map(d => (
                         <div key={'b'+d.day_of_week} className="schedule-cell">
-                            {d.is_active ? <input type="number" placeholder="min" value={d.break_duration || ''} onChange={e => setDay(d.day_of_week, 'break_duration', parseInt(e.target.value) || null)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">OFF</div>}
+                            {d.is_active ? <input type="number" placeholder="min" value={d.break_duration || ''} onChange={e => setDay(d.day_of_week, 1, 'break_duration', parseInt(e.target.value) || null)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">OFF</div>}
+                        </div>
+                    ))}
+                    <div className="schedule-cell schedule-header">Split</div>
+                    {block1Days.map(d => (
+                        <div key={'sp'+d.day_of_week} className="schedule-cell" style={{textAlign:'center'}}>
+                            {d.is_active ? (
+                                hasSplit(d.day_of_week)
+                                    ? <button className="btn btn-sm" style={{padding:'2px 6px',fontSize:'11px',color:'var(--danger)'}} onClick={() => removeSplit(d.day_of_week)} title="Remove split shift">X</button>
+                                    : <button className="btn btn-sm btn-outline" style={{padding:'2px 6px',fontSize:'11px'}} onClick={() => addSplit(d.day_of_week)} title="Add split shift block">+</button>
+                            ) : null}
                         </div>
                     ))}
                 </div>
+
+                {/* Split shift block 2 rows */}
+                {block1Days.some(d => d.is_active && hasSplit(d.day_of_week)) && (
+                    <div style={{marginBottom:'16px', padding:'8px', background:'var(--gray-50)', borderRadius:'var(--radius)', border:'1px solid var(--gray-200)'}}>
+                        <small style={{color:'var(--gray-500)', fontWeight:600}}>Split Shift (Block 2)</small>
+                        <div className="schedule-grid" style={{marginTop:'8px'}}>
+                            <div className="schedule-cell schedule-header"></div>
+                            {[1,2,3,4,5,6,7].map(d => <div key={d} className="schedule-cell schedule-header">{DAYS_SHORT[d]}</div>)}
+                            <div className="schedule-cell schedule-header">Start</div>
+                            {[1,2,3,4,5,6,7].map(dow => {
+                                const b2 = getBlock2(dow);
+                                return <div key={'s2'+dow} className="schedule-cell">
+                                    {b2 ? <input type="time" value={b2.start_time || ''} onChange={e => setDay(dow, 2, 'start_time', e.target.value)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">-</div>}
+                                </div>;
+                            })}
+                            <div className="schedule-cell schedule-header">End</div>
+                            {[1,2,3,4,5,6,7].map(dow => {
+                                const b2 = getBlock2(dow);
+                                return <div key={'e2'+dow} className="schedule-cell">
+                                    {b2 ? <input type="time" value={b2.end_time || ''} onChange={e => setDay(dow, 2, 'end_time', e.target.value)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">-</div>}
+                                </div>;
+                            })}
+                            <div className="schedule-cell schedule-header">Break</div>
+                            {[1,2,3,4,5,6,7].map(dow => {
+                                const b2 = getBlock2(dow);
+                                return <div key={'b2'+dow} className="schedule-cell">
+                                    {b2 ? <input type="number" placeholder="min" value={b2.break_duration || ''} onChange={e => setDay(dow, 2, 'break_duration', parseInt(e.target.value) || null)} style={{width:'100%',padding:'4px',border:'1px solid var(--gray-300)',borderRadius:'4px',fontSize:'13px'}} /> : <div className="schedule-day-off">-</div>}
+                                </div>;
+                            })}
+                        </div>
+                    </div>
+                )}
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                     <span style={{fontWeight:600}}>Total: {totalHours.toFixed(1)}h / week <InfoTip text="This is the gross scheduled hours total (before breaks). The schedule defines daily start/end times and which days are 'contracted'. The contract's Weekly Hours field sets the overtime threshold — they work together but are independent settings." /></span>
                     <button className="btn btn-primary" onClick={save}>Save Schedule</button>

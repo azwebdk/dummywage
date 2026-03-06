@@ -99,12 +99,15 @@ function handleRuleSets(PDO $pdo, string $method, ?string $id, ?string $sub, ?st
             return $rows;
 
         case 'POST':
+            if (empty($body['name'])) {
+                throw new Exception("name is required");
+            }
             $stmt = $pdo->prepare("
                 INSERT INTO wage_rule_sets (name, description, overtime_model, overtime_trigger_mode, balancing_mode, balancing_period_weeks, stacking_mode, holiday_calendar, breaks_paid, default_break_duration, tier1_threshold, tier1_rate, tier2_rate, flat_overtime_rate, schedule_change_enabled, schedule_change_rate)
                 VALUES (:name, :description, :overtime_model, :overtime_trigger_mode, :balancing_mode, :balancing_period_weeks, :stacking_mode, :holiday_calendar, :breaks_paid, :default_break_duration, :tier1_threshold, :tier1_rate, :tier2_rate, :flat_overtime_rate, :schedule_change_enabled, :schedule_change_rate)
             ");
             $stmt->execute([
-                'name' => $body['name'] ?? 'New Rule Set',
+                'name' => $body['name'],
                 'description' => $body['description'] ?? '',
                 'overtime_model' => $body['overtime_model'] ?? 'tiered',
                 'overtime_trigger_mode' => $body['overtime_trigger_mode'] ?? 'combined',
@@ -232,8 +235,11 @@ function handleEmployees(PDO $pdo, string $method, ?string $id, ?string $sub, ?s
             ")->fetchAll();
 
         case 'POST':
+            if (empty($body['first_name']) || empty($body['last_name'])) {
+                throw new Exception("first_name and last_name are required");
+            }
             $stmt = $pdo->prepare("INSERT INTO employees (first_name, last_name, email, employee_number) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$body['first_name'] ?? '', $body['last_name'] ?? '', $body['email'] ?? '', $body['employee_number'] ?? null]);
+            $stmt->execute([$body['first_name'], $body['last_name'], $body['email'] ?? '', $body['employee_number'] ?? null]);
             return ['id' => $pdo->lastInsertId(), 'message' => 'Created'];
 
         case 'PUT':
@@ -247,6 +253,7 @@ function handleEmployees(PDO $pdo, string $method, ?string $id, ?string $sub, ?s
                     $params[$f] = $body[$f];
                 }
             }
+            if (empty($sets)) throw new Exception("No fields to update");
             $params['id'] = $id;
             $pdo->prepare("UPDATE employees SET " . implode(', ', $sets) . " WHERE id = :id")->execute($params);
             return ['message' => 'Updated'];
@@ -276,6 +283,12 @@ function handleContracts(PDO $pdo, string $method, ?string $id, array $body) {
             return $pdo->query("SELECT * FROM employee_contracts ORDER BY start_date DESC")->fetchAll();
 
         case 'POST':
+            if (empty($body['employee_id']) || empty($body['start_date']) || !isset($body['base_hourly_wage']) || empty($body['rule_set_id'])) {
+                throw new Exception("employee_id, start_date, base_hourly_wage, and rule_set_id are required");
+            }
+            if ($body['base_hourly_wage'] < 0) {
+                throw new Exception("base_hourly_wage must be non-negative");
+            }
             $stmt = $pdo->prepare("
                 INSERT INTO employee_contracts (employee_id, contract_type, start_date, end_date, total_weekly_hours, base_hourly_wage, monthly_salary, salary_type, rule_set_id, holiday_calendar, collective_agreement, breaks_paid, default_break_duration)
                 VALUES (:employee_id, :contract_type, :start_date, :end_date, :total_weekly_hours, :base_hourly_wage, :monthly_salary, :salary_type, :rule_set_id, :holiday_calendar, :collective_agreement, :breaks_paid, :default_break_duration)
@@ -305,11 +318,12 @@ function handleContracts(PDO $pdo, string $method, ?string $id, array $body) {
             $old = $stmt->fetch();
             if (!$old) throw new Exception("Contract not found");
 
-            $trackFields = ['total_weekly_hours','base_hourly_wage','contract_type','breaks_paid'];
+            $trackFields = ['contract_type','start_date','end_date','total_weekly_hours','base_hourly_wage','monthly_salary','salary_type','rule_set_id','holiday_calendar','collective_agreement','breaks_paid','default_break_duration','is_active'];
+            $changedBy = $body['changed_by'] ?? 'system';
             foreach ($trackFields as $f) {
                 if (array_key_exists($f, $body) && $body[$f] != $old[$f]) {
-                    $pdo->prepare("INSERT INTO contract_changes (contract_id, employee_id, field_name, old_value, new_value, effective_date, changed_by) VALUES (?, ?, ?, ?, ?, ?, 'admin')")
-                        ->execute([$id, $old['employee_id'], $f, $old[$f], $body[$f], $body['effective_date'] ?? date('Y-m-d')]);
+                    $pdo->prepare("INSERT INTO contract_changes (contract_id, employee_id, field_name, old_value, new_value, effective_date, changed_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                        ->execute([$id, $old['employee_id'], $f, $old[$f], $body[$f], $body['effective_date'] ?? date('Y-m-d'), $changedBy]);
                 }
             }
 
@@ -461,6 +475,9 @@ function handleTimeEntries(PDO $pdo, string $method, ?string $id, array $body) {
             return $stmt->fetchAll();
 
         case 'POST':
+            if (empty($body['employee_id']) || empty($body['date']) || empty($body['clock_in']) || empty($body['clock_out'])) {
+                throw new Exception("employee_id, date, clock_in, and clock_out are required");
+            }
             $stmt = $pdo->prepare("INSERT INTO time_entries (employee_id, date, clock_in, clock_out, break_minutes, is_employer_cancelled, notes) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $body['employee_id'],
@@ -490,6 +507,7 @@ function handleTimeEntries(PDO $pdo, string $method, ?string $id, array $body) {
                     $params[$f] = $body[$f];
                 }
             }
+            if (empty($sets)) throw new Exception("No fields to update");
             $params['id'] = $id;
             $pdo->prepare("UPDATE time_entries SET " . implode(', ', $sets) . " WHERE id = :id")->execute($params);
             // Recalculate
@@ -538,6 +556,21 @@ function handleCalculate(PDO $pdo, string $method, ?string $id, array $seg, arra
             $pdo->prepare("DELETE FROM warnings WHERE employee_id = ? AND date = ? AND created_at >= datetime('now', '-10 seconds')")->execute([$body['employee_id'], $body['date']]);
             $pdo->prepare("DELETE FROM time_entries WHERE id = ?")->execute([$entryId]);
             return $result;
+        }
+        if ($id === 'bulk') {
+            // Recalculate all time entries
+            $entries = $pdo->query("SELECT id FROM time_entries ORDER BY date ASC, clock_in ASC")->fetchAll();
+            $success = 0;
+            $errors = 0;
+            foreach ($entries as $entry) {
+                try {
+                    $calc->calculate((int)$entry['id']);
+                    $success++;
+                } catch (Exception $e) {
+                    $errors++;
+                }
+            }
+            return ['message' => "Recalculated $success entries" . ($errors > 0 ? " ($errors errors)" : ''), 'success' => $success, 'errors' => $errors];
         }
     }
     throw new Exception("Invalid calculate endpoint");
